@@ -1,4 +1,4 @@
-# AI LLM Provider Examples
+# LLM Analytics Apps
 
 Example implementations of various LLM providers using PostHog's AI SDKs. This repository demonstrates how to integrate multiple AI providers (Anthropic, OpenAI, Google Gemini) with PostHog for analytics tracking.
 
