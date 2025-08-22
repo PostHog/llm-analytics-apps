@@ -1,0 +1,118 @@
+import { withTracing } from '@posthog/ai';
+import { PostHog } from 'posthog-node';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
+import { BaseProvider, Message, Tool } from './base.js';
+
+export class VercelAIProvider extends BaseProvider {
+  private openaiClient: any;
+
+  constructor(posthogClient: PostHog) {
+    super(posthogClient);
+    this.openaiClient = createOpenAI({
+      apiKey: process.env.OPENAI_API_KEY!
+    });
+    this.messages = this.getInitialMessages();
+  }
+
+  protected getInitialMessages(): Message[] {
+    return [
+      {
+        role: 'system',
+        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+      }
+    ];
+  }
+
+  protected getToolDefinitions(): Tool[] {
+    // Vercel AI SDK doesn't use this, but we need to implement it
+    return [];
+  }
+
+  getName(): string {
+    return 'Vercel AI SDK (OpenAI)';
+  }
+
+  async chat(userInput: string, base64Image?: string): Promise<string> {
+    let userContent: any;
+    
+    if (base64Image) {
+      // For image input, create content array with text and image
+      userContent = [
+        { type: 'text', text: userInput },
+        { 
+          type: 'image', 
+          image: `data:image/png;base64,${base64Image}`
+        }
+      ];
+    } else {
+      userContent = userInput;
+    }
+    
+    const userMessage: Message = {
+      role: 'user',
+      content: userContent
+    };
+    this.messages.push(userMessage);
+
+    const displayParts: string[] = [];
+
+    try {
+      // Use vision model for images, regular model otherwise
+      const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+      const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
+        posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+        posthogPrivacyMode: false
+      });
+      
+      const { text, toolResults } = await generateText({
+        model: model,
+        messages: this.messages as any,
+        maxOutputTokens: 200,
+        temperature: 0.7,
+        tools: {
+          get_weather: {
+            description: 'Get the current weather for a specific location',
+            inputSchema: z.object({
+              location: z.string().describe('The city or location name to get weather for')
+            }),
+            execute: async ({ location }) => {
+              return this.getWeather(location);
+            }
+          }
+        }
+      });
+
+      if (text) {
+        displayParts.push(text);
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: text
+        };
+        this.messages.push(assistantMessage);
+      }
+
+      if (toolResults && toolResults.length > 0) {
+        for (const result of toolResults) {
+          if (result.toolName === 'get_weather' && 'output' in result) {
+            const toolResultText = this.formatToolResult('get_weather', result.output as string);
+            displayParts.push(toolResultText);
+            
+            // Add tool result to message history
+            const toolMessage: Message = {
+              role: 'assistant',
+              content: toolResultText
+            };
+            this.messages.push(toolMessage);
+          }
+        }
+      }
+
+      return displayParts.length > 0 ? displayParts.join('\n\n') : 'No response received';
+    } catch (error: any) {
+      console.error('Error in Vercel AI chat:', error);
+      throw new Error(`Vercel AI Provider error: ${error.message}`);
+    }
+  }
+}

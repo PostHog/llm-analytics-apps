@@ -1,0 +1,203 @@
+import { OpenAI as PostHogOpenAI } from '@posthog/ai';
+import { PostHog } from 'posthog-node';
+import { StreamingProvider, Message, Tool } from './base.js';
+
+export class OpenAIChatStreamingProvider extends StreamingProvider {
+  private client: any;
+
+  constructor(posthogClient: PostHog) {
+    super(posthogClient);
+    this.client = new PostHogOpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+      posthog: posthogClient
+    });
+    this.messages = this.getInitialMessages();
+  }
+
+  protected getInitialMessages(): Message[] {
+    return [
+      {
+        role: 'system',
+        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+      }
+    ];
+  }
+
+  protected getToolDefinitions(): Tool[] {
+    return [
+      {
+        type: 'function',
+        function: {
+          name: 'get_weather',
+          description: 'Get the current weather for a specific location',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: {
+                type: 'string',
+                description: 'The city or location name to get weather for'
+              }
+            },
+            required: ['location']
+          }
+        }
+      }
+    ];
+  }
+
+  getName(): string {
+    return 'OpenAI Chat Completions Streaming';
+  }
+
+  async *chatStream(
+    userInput: string,
+    base64Image?: string
+  ): AsyncGenerator<string, void, unknown> {
+    let userContent: any;
+
+    if (base64Image) {
+      userContent = [
+        {
+          type: 'text',
+          text: userInput
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:image/png;base64,${base64Image}`
+          }
+        }
+      ];
+    } else {
+      userContent = userInput;
+    }
+
+    const userMessage: Message = {
+      role: 'user',
+      content: userContent
+    };
+    this.messages.push(userMessage);
+
+    const stream = await this.client.chat.completions.create({
+      model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',
+      max_tokens: 200,
+      temperature: 0.7,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      messages: this.messages,
+      tools: this.tools,
+      tool_choice: 'auto',
+      stream: true,
+      stream_options: {
+        include_usage: true
+      }
+    });
+
+    let accumulatedContent = '';
+    const toolCalls: any[] = [];
+    const toolCallsByIndex: Map<number, any> = new Map();
+
+    for await (const chunk of stream) {
+      // Handle text content
+      if (chunk.choices?.[0]?.delta?.content) {
+        const content = chunk.choices[0].delta.content;
+        accumulatedContent += content;
+        yield content;
+      }
+
+      // Handle tool calls
+      if (chunk.choices?.[0]?.delta?.tool_calls) {
+        for (const toolCallDelta of chunk.choices[0].delta.tool_calls) {
+          const index = toolCallDelta.index;
+
+          // Initialize or get existing tool call
+          if (!toolCallsByIndex.has(index)) {
+            toolCallsByIndex.set(index, {
+              id: toolCallDelta.id || '',
+              type: 'function',
+              function: {
+                name: toolCallDelta.function?.name || '',
+                arguments: ''
+              }
+            });
+          }
+
+          const toolCall = toolCallsByIndex.get(index)!;
+
+          // Update tool call information
+          if (toolCallDelta.id) {
+            toolCall.id = toolCallDelta.id;
+          }
+          if (toolCallDelta.function?.name) {
+            toolCall.function.name = toolCallDelta.function.name;
+          }
+          if (toolCallDelta.function?.arguments) {
+            toolCall.function.arguments += toolCallDelta.function.arguments;
+          }
+        }
+      }
+
+      // Check for finish reason to know when tool calls are complete
+      if (chunk.choices?.[0]?.finish_reason === 'tool_calls') {
+        // Convert map to array and execute tools
+        const completedToolCalls = Array.from(toolCallsByIndex.values());
+        
+        for (const toolCall of completedToolCalls) {
+          toolCalls.push(toolCall);
+          
+          if (toolCall.function.name === 'get_weather') {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              const location = args.location || 'unknown';
+              const weatherResult = this.getWeather(location);
+              const toolResultText = this.formatToolResult('get_weather', weatherResult);
+              yield '\n\n' + toolResultText;
+            } catch (e) {
+              console.error('Error parsing tool arguments:', e);
+            }
+          }
+        }
+      }
+    }
+
+    // Save assistant message
+    const assistantMessage: Message = {
+      role: 'assistant',
+      content: accumulatedContent || undefined
+    };
+
+    if (toolCalls.length > 0) {
+      assistantMessage.tool_calls = toolCalls;
+    }
+
+    this.messages.push(assistantMessage);
+
+    // Add tool results to messages if any tools were called
+    for (const toolCall of toolCalls) {
+      if (toolCall.function.name === 'get_weather') {
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          const location = args.location || 'unknown';
+          const weatherResult = this.getWeather(location);
+
+          const toolResultMessage: any = {
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: weatherResult
+          };
+          this.messages.push(toolResultMessage);
+        } catch (e) {
+          console.error('Error adding tool result:', e);
+        }
+      }
+    }
+  }
+
+  // Non-streaming chat for compatibility
+  async chat(userInput: string, base64Image?: string): Promise<string> {
+    const chunks: string[] = [];
+    for await (const chunk of this.chatStream(userInput, base64Image)) {
+      chunks.push(chunk);
+    }
+    return chunks.join('');
+  }
+}

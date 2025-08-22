@@ -1,0 +1,43 @@
+{
+  "name": "node-unified",
+  "version": "1.0.0",
+  "description": "Unified AI Chatbot - Supports multiple LLM providers: Anthropic, Gemini, LangChain, and OpenAI",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "typescript",
+    "node",
+    "cli",
+    "chatbot",
+    "ai",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.4",
+    "@ai-sdk/provider-utils": "^3.0.1",
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@google/genai": "^1.11.0",
+    "@langchain/core": "^0.3.66",
+    "@langchain/openai": "^0.3.14",
+    "@posthog/ai": "^6.1.2",
+    "ai": "^5.0.6",
+    "dotenv": "^16.4.5",
+    "langchain": "^0.3.30",
+    "openai": "^4.0.0",
+    "posthog-node": "^5.7.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

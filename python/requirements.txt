@@ -1,0 +1,20 @@
+# Core dependencies
+python-dotenv==1.0.0
+
+# PostHog
+posthog>=6.6.1
+
+# Provider-specific dependencies
+# Anthropic
+anthropic>=0.18.0
+
+# Google Gemini
+google-genai
+
+# LangChain
+langchain
+langchain-core
+langchain-openai
+
+# OpenAI (also needed for LangChain)
+openai
