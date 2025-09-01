@@ -50,7 +50,8 @@ async function selectMode(): Promise<string> {
     ['1', 'Chat Mode'],
     ['2', 'Tool Call Test'],
     ['3', 'Message Test'],
-    ['4', 'Image Test']
+    ['4', 'Image Test'],
+    ['5', 'Embeddings Test']
   ]);
 
   console.log('\nSelect Mode:');
@@ -64,22 +65,24 @@ async function selectMode(): Promise<string> {
       console.log(`  ${key}. ${name} (Auto-test: Simple greeting)`);
     } else if (key === '4') {
       console.log(`  ${key}. ${name} (Auto-test: Describe image)`);
+    } else if (key === '5') {
+      console.log(`  ${key}. ${name} (Auto-test: Generate embeddings)`);
     }
   }
   console.log('='.repeat(50));
 
   return new Promise((resolve) => {
     const askForMode = () => {
-      rl.question('\nSelect a mode (1-4) or \'q\' to quit: ', (choice) => {
+      rl.question('\nSelect a mode (1-5) or \'q\' to quit: ', (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4'].includes(choice)) {
+        if (['1', '2', '3', '4', '5'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (choice === 'q') {
           console.log('\n👋 Goodbye!');
           cleanup();
         } else {
-          console.log('❌ Invalid choice. Please select 1, 2, 3, or 4.');
+          console.log('❌ Invalid choice. Please select 1, 2, 3, 4, or 5.');
           askForMode();
         }
       });
@@ -88,8 +91,8 @@ async function selectMode(): Promise<string> {
   });
 }
 
-function displayProviders(): Map<string, string> {
-  const providers = new Map<string, string>([
+function displayProviders(mode?: string): Map<string, string> {
+  let providers = new Map<string, string>([
     ['1', 'Anthropic'],
     ['2', 'Anthropic Streaming'],
     ['3', 'Google Gemini'],
@@ -98,10 +101,19 @@ function displayProviders(): Map<string, string> {
     ['6', 'OpenAI Responses'],
     ['7', 'OpenAI Responses Streaming'],
     ['8', 'OpenAI Chat Completions'],
-    ['9', 'OpenAI Chat Completions Streaming'],
-    ['10', 'Vercel AI SDK (OpenAI)'],
-    ['11', 'Vercel AI SDK Streaming (OpenAI)']
+    ['9', 'OpenAI Chat Completions Streaming']
   ]);
+
+  // Filter providers for embeddings mode
+  if (mode === '5') {
+    // Only OpenAI providers support embeddings
+    providers = new Map<string, string>([
+      ['6', 'OpenAI Responses'],
+      ['7', 'OpenAI Responses Streaming'],
+      ['8', 'OpenAI Chat Completions'],
+      ['9', 'OpenAI Chat Completions Streaming']
+    ]);
+  }
 
   console.log('\nAvailable AI Providers:');
   console.log('='.repeat(50));
@@ -116,7 +128,7 @@ function displayProviders(): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-11)';
+      let prompt = '\nSelect a provider (1-9)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -127,7 +139,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
       
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -166,10 +178,6 @@ function createProvider(choice: string): any {
       return new OpenAIChatProvider(posthog);
     case '9':
       return new OpenAIChatStreamingProvider(posthog);
-    case '10':
-      return new VercelAIProvider(posthog);
-    case '11':
-      return new VercelAIStreamingProvider(posthog);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -277,6 +285,47 @@ async function runMessageTest(provider: any): Promise<{ success: boolean; error:
   }
 }
 
+async function runEmbeddingsTest(provider: any): Promise<{ success: boolean; error: string | null }> {
+  const testTexts = [
+    'The quick brown fox jumps over the lazy dog.'
+  ];
+
+  console.log(`\nEmbeddings Test: ${provider.getName()}`);
+  console.log('-'.repeat(50));
+
+  // Check if provider supports embeddings
+  if (!provider.embed || typeof provider.embed !== 'function') {
+    console.log(`❌ ${provider.getName()} does not support embeddings`);
+    return { success: false, error: 'Provider does not support embeddings' };
+  }
+
+  try {
+    for (let i = 0; i < testTexts.length; i++) {
+      const text = testTexts[i];
+      console.log(`\nTest ${i + 1}: "${text}"`);
+
+      // Generate embeddings
+      const embedding = await provider.embed(text);
+
+      if (embedding && embedding.length > 0) {
+        console.log(`✅ Generated embedding with ${embedding.length} dimensions`);
+        // Show first 5 values as sample
+        console.log(`   Sample values: [${embedding.slice(0, 5).join(', ')}]...`);
+      } else {
+        console.log(`❌ Failed to generate embedding`);
+        return { success: false, error: `Failed to generate embedding for text ${i + 1}` };
+      }
+    }
+
+    console.log();
+    return { success: true, error: null };
+
+  } catch (error: any) {
+    console.log(`❌ Error: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
 async function runImageTest(provider: any): Promise<{ success: boolean; error: string | null }> {
   // Create a simple test image (1x1 red pixel as base64)
   const base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
@@ -305,7 +354,7 @@ async function runImageTest(provider: any): Promise<{ success: boolean; error: s
 }
 
 async function runAllTests(mode: string): Promise<void> {
-  const providersInfo: Array<[string, string]> = [
+  let providersInfo: Array<[string, string]> = [
     ['1', 'Anthropic'],
     ['2', 'Anthropic Streaming'],
     ['3', 'Google Gemini'],
@@ -313,12 +362,23 @@ async function runAllTests(mode: string): Promise<void> {
     ['5', 'LangChain (OpenAI)'],
     ['6', 'OpenAI Responses'],
     ['7', 'OpenAI Responses Streaming'],
-    ['8', 'OpenAI Chat Completions'],
-    ['9', 'OpenAI Chat Completions Streaming'],
-    ['10', 'Vercel AI SDK (OpenAI)']
+    ['8', 'OpenAI Chat Completions']
   ];
+
+  // Filter providers for embeddings test (only those that support it)
+  if (mode === '5') {
+    // Only OpenAI providers support embeddings
+    providersInfo = [
+      ['6', 'OpenAI Responses'],
+      ['7', 'OpenAI Responses Streaming'],
+      ['8', 'OpenAI Chat Completions']
+    ];
+  }
   
-  const testName = mode === '2' ? 'Tool Call Test' : mode === '3' ? 'Message Test' : 'Image Test';
+  const testName = mode === '2' ? 'Tool Call Test' : 
+                   mode === '3' ? 'Message Test' : 
+                   mode === '4' ? 'Image Test' : 
+                   mode === '5' ? 'Embeddings Test' : 'Unknown Test';
   console.log(`\n🔄 Running ${testName} on all providers...`);
   console.log('='.repeat(60));
   console.log();
@@ -332,7 +392,7 @@ async function runAllTests(mode: string): Promise<void> {
   const results: TestResult[] = [];
   
   for (const [providerId, providerName] of providersInfo) {
-    console.log(`[${providerId}/9] Testing ${providerName}...`);
+    console.log(`[${providerId}/8] Testing ${providerName}...`);
     
     try {
       const provider = createProvider(providerId);
@@ -342,7 +402,11 @@ async function runAllTests(mode: string): Promise<void> {
         ? await runToolCallTest(provider)
         : mode === '3'
         ? await runMessageTest(provider)
-        : await runImageTest(provider);
+        : mode === '4'
+        ? await runImageTest(provider)
+        : mode === '5'
+        ? await runEmbeddingsTest(provider)
+        : { success: false, error: 'Unknown test mode' };
       
       results.push({
         name: providerName,
@@ -397,11 +461,11 @@ async function main(): Promise<void> {
   // Main loop for provider selection and testing
   while (true) {
     // Display providers and get user choice
-    displayProviders();
+    displayProviders(mode);
     
     // Allow mode change for all modes, 'all' option only for test modes
-    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4');
-    const allowAll = (mode === '2' || mode === '3' || mode === '4');
+    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5');
+    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5');
     const choice = await getProviderChoice(allowModeChange, allowAll);
     
     // Check if user wants to change mode
@@ -446,6 +510,12 @@ async function main(): Promise<void> {
     } else if (mode === '4') {
       // Image Test - run test and loop back
       const result = await runImageTest(provider);
+      if (!result.error) {
+        console.log();
+      }
+    } else if (mode === '5') {
+      // Embeddings Test - run test and loop back
+      const result = await runEmbeddingsTest(provider);
       if (!result.error) {
         console.log();
       }
