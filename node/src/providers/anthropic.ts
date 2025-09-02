@@ -63,7 +63,7 @@ export class AnthropicProvider extends BaseProvider {
     this.messages.push(userMessage);
 
     const message = await this.client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-haiku-latest",
       max_tokens: 200,
       temperature: 0.7,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || "user-hog",
@@ -88,7 +88,7 @@ export class AnthropicProvider extends BaseProvider {
             const weatherResult = this.getWeather(location);
             const toolResultText = this.formatToolResult(
               "get_weather",
-              weatherResult,
+              weatherResult
             );
             toolResults.push(toolResultText);
             displayParts.push(toolResultText);

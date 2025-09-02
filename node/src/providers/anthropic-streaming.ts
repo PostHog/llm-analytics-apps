@@ -65,7 +65,7 @@ export class AnthropicStreamingProvider extends StreamingProvider {
     this.messages.push(userMessage);
 
     const stream = await this.client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-haiku-latest",
       max_tokens: 200,
       temperature: 0.7,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || "user-hog",
