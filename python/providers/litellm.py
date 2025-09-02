@@ -1,5 +1,5 @@
 import os
-from posthog.ai.litellm import completion
+from posthog.ai.litellm import completion, embedding
 from posthog import Posthog
 from .base import BaseProvider, StreamingProvider
 
@@ -54,6 +54,32 @@ class LiteLLMProvider(BaseProvider):
                 "content": "You are a helpful AI assistant. When users ask about weather, use the get_weather function to provide current conditions."
             }
         ]
+
+    def embed(self, text: str, model: str = None):
+        # Use provider-specific embedding models if not specified
+        if model is None:
+            if self.api_provider == "openai":
+                model = "openai/text-embedding-3-small"
+            elif self.api_provider == "gemini":
+                model = "gemini/text-embedding-004"
+            else:
+                model = "openai/text-embedding-3-small"
+        
+        response = embedding(
+            posthog_client=self.posthog_client,
+            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "python-cli-user"),
+            model=model,
+            input=text
+        )
+        
+        if response.data and len(response.data) > 0:
+            # Handle both dict and object formats
+            first_embedding = response.data[0]
+            if hasattr(first_embedding, 'embedding'):
+                return first_embedding.embedding
+            elif isinstance(first_embedding, dict) and 'embedding' in first_embedding:
+                return first_embedding['embedding']
+        return []
 
     def chat(self, user_input: str, base64_image: str = None) -> str:
         if base64_image:
@@ -166,6 +192,32 @@ class LiteLLMStreamingProvider(StreamingProvider):
                 "content": "You are a helpful AI assistant. When users ask about weather, use the get_weather function to provide current conditions."
             }
         ]
+
+    def embed(self, text: str, model: str = None):
+        # Use provider-specific embedding models if not specified
+        if model is None:
+            if self.api_provider == "openai":
+                model = "openai/text-embedding-3-small"
+            elif self.api_provider == "gemini":
+                model = "gemini/text-embedding-004"
+            else:
+                model = "openai/text-embedding-3-small"
+        
+        response = embedding(
+            posthog_client=self.posthog_client,
+            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "python-cli-user"),
+            model=model,
+            input=text
+        )
+        
+        if response.data and len(response.data) > 0:
+            # Handle both dict and object formats
+            first_embedding = response.data[0]
+            if hasattr(first_embedding, 'embedding'):
+                return first_embedding.embedding
+            elif isinstance(first_embedding, dict) and 'embedding' in first_embedding:
+                return first_embedding['embedding']
+        return []
 
     def chat(self, user_input: str, base64_image: str = None) -> str:
         response_parts = []
