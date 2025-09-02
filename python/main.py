@@ -186,7 +186,7 @@ def select_api_provider(mode="chat"):
             print("\n\n👋 Goodbye!")
             exit(0)
 
-def create_provider(choice, mode="1"):
+def create_provider(choice, mode="1", api_provider=None, auto_mode=False):
     """Create the selected provider instance"""
     if choice == "1":
         return AnthropicProvider(posthog)
@@ -207,12 +207,20 @@ def create_provider(choice, mode="1"):
     elif choice == "9":
         return OpenAIChatStreamingProvider(posthog)
     elif choice == "10":
-        provider_mode = "embeddings" if mode == "5" else "chat"
-        api_provider = select_api_provider(provider_mode)
+        if api_provider is None:
+            if auto_mode:
+                api_provider = "openai"  # Default to OpenAI for automated testing
+            else:
+                provider_mode = "embeddings" if mode == "5" else "chat"
+                api_provider = select_api_provider(provider_mode)
         return LiteLLMProvider(posthog, api_provider)
     elif choice == "11":
-        provider_mode = "embeddings" if mode == "5" else "chat"
-        api_provider = select_api_provider(provider_mode)
+        if api_provider is None:
+            if auto_mode:
+                api_provider = "openai"  # Default to OpenAI for automated testing
+            else:
+                provider_mode = "embeddings" if mode == "5" else "chat"
+                api_provider = select_api_provider(provider_mode)
         return LiteLLMStreamingProvider(posthog, api_provider)
 
 def run_chat(provider):
@@ -420,7 +428,7 @@ def run_all_tests(mode):
         print(f"[{provider_id}/11] Testing {provider_name}...")
         
         try:
-            provider = create_provider(provider_id, mode)
+            provider = create_provider(provider_id, mode, auto_mode=True)
             
             # Run the appropriate test
             if mode == "2":
