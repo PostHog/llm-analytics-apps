@@ -144,6 +144,30 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
             print("\n\n👋 Goodbye!")
             exit(0)
 
+def select_api_provider():
+    """Select API provider for LiteLLM"""
+    api_providers = {
+        "1": "OpenAI",
+        "2": "Anthropic",
+        "3": "Gemini"
+    }
+    
+    print("\nSelect API Provider for LiteLLM:")
+    print("=" * 40)
+    for key, name in api_providers.items():
+        print(f"  {key}. {name}")
+    print("=" * 40)
+    
+    while True:
+        try:
+            choice = input("\nSelect an API provider (1-3): ").strip()
+            if choice in ["1", "2", "3"]:
+                return api_providers[choice].lower()
+            else:
+                print("❌ Invalid choice. Please select 1, 2, or 3.")
+        except KeyboardInterrupt:
+            print("\n\n👋 Goodbye!")
+            exit(0)
 
 def create_provider(choice):
     """Create the selected provider instance"""
@@ -166,9 +190,11 @@ def create_provider(choice):
     elif choice == "9":
         return OpenAIChatStreamingProvider(posthog)
     elif choice == "10":
-        return LiteLLMProvider(posthog, "openai")
+        api_provider = select_api_provider()
+        return LiteLLMProvider(posthog, api_provider)
     elif choice == "11":
-        return LiteLLMStreamingProvider(posthog, "openai")
+        api_provider = select_api_provider()
+        return LiteLLMStreamingProvider(posthog, api_provider)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""

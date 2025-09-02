@@ -14,6 +14,8 @@ class LiteLLMProvider(BaseProvider):
                 self.model = "openai/gpt-4"
             elif self.api_provider == "anthropic":
                 self.model = "claude-3-5-haiku-latest"
+            elif self.api_provider == "gemini":
+                self.model = "gemini/gemini-1.5-flash"
             else:
                 raise ValueError(f"Unsupported API provider: {api_provider}")
         else:
@@ -124,6 +126,8 @@ class LiteLLMStreamingProvider(StreamingProvider):
                 self.model = "openai/gpt-4"
             elif self.api_provider == "anthropic":
                 self.model = "claude-3-5-haiku-latest"
+            elif self.api_provider == "gemini":
+                self.model = "gemini/gemini-1.5-flash"
             else:
                 raise ValueError(f"Unsupported API provider: {api_provider}")
         else:
