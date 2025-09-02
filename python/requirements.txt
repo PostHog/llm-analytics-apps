@@ -16,5 +16,8 @@ langchain
 langchain-core
 langchain-openai
 
+# LiteLLM
+litellm
+
 # OpenAI (also needed for LangChain)
 openai
