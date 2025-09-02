@@ -49,6 +49,18 @@ export class OpenAIChatProvider extends BaseProvider {
     return 'OpenAI Chat Completions';
   }
 
+  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+    const response = await this.client.embeddings.create({
+      model: model,
+      input: text
+    });
+
+    if (response.data && response.data.length > 0) {
+      return response.data[0].embedding;
+    }
+    return [];
+  }
+
   async chat(userInput: string, base64Image?: string): Promise<string> {
     let userContent: any;
     

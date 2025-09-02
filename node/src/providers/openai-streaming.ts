@@ -40,6 +40,19 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     return 'OpenAI Responses Streaming';
   }
 
+  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+    const response = await this.client.embeddings.create({
+      model: model,
+      input: text,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog'
+    });
+
+    if (response.data && response.data.length > 0) {
+      return response.data[0].embedding;
+    }
+    return [];
+  }
+
   async *chatStream(
     userInput: string,
     base64Image?: string
