@@ -60,7 +60,7 @@ class AnthropicProvider(BaseProvider):
         
         # Send all messages in conversation history
         message = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-haiku-latest",
             max_tokens=200,
             temperature=0.7,
             posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),

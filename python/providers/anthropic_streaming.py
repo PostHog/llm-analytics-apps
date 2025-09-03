@@ -62,7 +62,7 @@ class AnthropicStreamingProvider(StreamingProvider):
         # Create streaming response using create() with stream=True
         # The PostHog wrapper's stream() method expects stream=True to be passed
         stream = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-haiku-latest",
             max_tokens=200,
             temperature=0.7,
             posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),

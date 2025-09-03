@@ -13,6 +13,7 @@ from providers.anthropic_streaming import AnthropicStreamingProvider
 from providers.gemini import GeminiProvider
 from providers.gemini_streaming import GeminiStreamingProvider
 from providers.langchain import LangChainProvider
+from providers.litellm import LiteLLMProvider, LiteLLMStreamingProvider
 from providers.openai import OpenAIProvider
 from providers.openai_chat import OpenAIChatProvider
 from providers.openai_chat_streaming import OpenAIChatStreamingProvider
@@ -83,17 +84,21 @@ def display_providers(mode=None):
         "6": "OpenAI Responses",
         "7": "OpenAI Responses Streaming",
         "8": "OpenAI Chat Completions",
-        "9": "OpenAI Chat Completions Streaming"
+        "9": "OpenAI Chat Completions Streaming",
+        "10": "LiteLLM",
+        "11": "LiteLLM Streaming"
     }
     
     # Filter providers for embeddings mode
     if mode == "5":
-        # Only OpenAI providers support embeddings
+        # OpenAI and LiteLLM providers support embeddings
         providers = {
             "6": "OpenAI Responses",
             "7": "OpenAI Responses Streaming",
             "8": "OpenAI Chat Completions",
-            "9": "OpenAI Chat Completions Streaming"
+            "9": "OpenAI Chat Completions Streaming",
+            "10": "LiteLLM",
+            "11": "LiteLLM Streaming"
         }
     
     print("\nAvailable AI Providers:")
@@ -107,7 +112,7 @@ def display_providers(mode=None):
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
     
     # Build prompt based on valid choices
     if len(valid_choices) == 2:
@@ -115,7 +120,7 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-9)"
+        prompt = "\nSelect a provider (1-11)"
     
     if allow_all:
         prompt += ", 'a' for all providers"
@@ -141,7 +146,47 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
             print("\n\n👋 Goodbye!")
             exit(0)
 
-def create_provider(choice):
+def select_api_provider(mode="chat"):
+    """Select API provider for LiteLLM"""
+    if mode == "embeddings":
+        # Only providers that support embeddings
+        api_providers = {
+            "1": "OpenAI",
+            "2": "Gemini"
+        }
+        max_choice = "2"
+        choice_list = ["1", "2"]
+    else:
+        # All providers for chat modes
+        api_providers = {
+            "1": "OpenAI",
+            "2": "Anthropic", 
+            "3": "Gemini"
+        }
+        max_choice = "3"
+        choice_list = ["1", "2", "3"]
+    
+    print(f"\nSelect API Provider for LiteLLM ({mode}):")
+    print("=" * 50)
+    for key, name in api_providers.items():
+        print(f"  {key}. {name}")
+    print("=" * 50)
+    
+    while True:
+        try:
+            choice = input(f"\nSelect an API provider (1-{max_choice}): ").strip()
+            if choice in choice_list:
+                return api_providers[choice].lower()
+            else:
+                if len(choice_list) == 2:
+                    print("❌ Invalid choice. Please select 1 or 2.")
+                else:
+                    print("❌ Invalid choice. Please select 1, 2, or 3.")
+        except KeyboardInterrupt:
+            print("\n\n👋 Goodbye!")
+            exit(0)
+
+def create_provider(choice, mode="1", api_provider=None, auto_mode=False):
     """Create the selected provider instance"""
     if choice == "1":
         return AnthropicProvider(posthog)
@@ -161,6 +206,22 @@ def create_provider(choice):
         return OpenAIChatProvider(posthog)
     elif choice == "9":
         return OpenAIChatStreamingProvider(posthog)
+    elif choice == "10":
+        if api_provider is None:
+            if auto_mode:
+                api_provider = "openai"  # Default to OpenAI for automated testing
+            else:
+                provider_mode = "embeddings" if mode == "5" else "chat"
+                api_provider = select_api_provider(provider_mode)
+        return LiteLLMProvider(posthog, api_provider)
+    elif choice == "11":
+        if api_provider is None:
+            if auto_mode:
+                api_provider = "openai"  # Default to OpenAI for automated testing
+            else:
+                provider_mode = "embeddings" if mode == "5" else "chat"
+                api_provider = select_api_provider(provider_mode)
+        return LiteLLMStreamingProvider(posthog, api_provider)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -328,16 +389,22 @@ def run_all_tests(mode):
         ("5", "LangChain (OpenAI)"),
         ("6", "OpenAI Responses"),
         ("7", "OpenAI Responses Streaming"),
-        ("8", "OpenAI Chat Completions")
+        ("8", "OpenAI Chat Completions"),
+        ("9", "OpenAI Chat Completions Streaming"),
+        ("10", "LiteLLM"),
+        ("11", "LiteLLM Streaming")
     ]
     
     # Filter providers for embeddings test (only those that support it)
     if mode == "5":
-        # Only OpenAI providers support embeddings
+        # OpenAI and LiteLLM providers support embeddings
         providers_info = [
             ("6", "OpenAI Responses"),
             ("7", "OpenAI Responses Streaming"),
-            ("8", "OpenAI Chat Completions")
+            ("8", "OpenAI Chat Completions"),
+            ("9", "OpenAI Chat Completions Streaming"),
+            ("10", "LiteLLM"),
+            ("11", "LiteLLM Streaming")
         ]
     
     if mode == "2":
@@ -358,10 +425,10 @@ def run_all_tests(mode):
     results = []
     
     for provider_id, provider_name in providers_info:
-        print(f"[{provider_id}/8] Testing {provider_name}...")
+        print(f"[{provider_id}/11] Testing {provider_name}...")
         
         try:
-            provider = create_provider(provider_id)
+            provider = create_provider(provider_id, mode, auto_mode=True)
             
             # Run the appropriate test
             if mode == "2":
@@ -443,7 +510,7 @@ def main():
         
         # Create provider instance
         try:
-            provider = create_provider(choice)
+            provider = create_provider(choice, mode)
             print(f"\n✅ Initialized {provider.get_name()}")
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
