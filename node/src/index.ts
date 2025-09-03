@@ -16,6 +16,8 @@ import { OpenAIChatStreamingProvider } from './providers/openai-chat-streaming.j
 import { OpenAIStreamingProvider } from './providers/openai-streaming.js';
 import { VercelAIProvider } from './providers/vercel-ai.js';
 import { VercelAIStreamingProvider } from './providers/vercel-ai-streaming.js';
+import { VercelGenerateObjectProvider } from './providers/vercel-generate-object.js';
+import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,7 +53,8 @@ async function selectMode(): Promise<string> {
     ['2', 'Tool Call Test'],
     ['3', 'Message Test'],
     ['4', 'Image Test'],
-    ['5', 'Embeddings Test']
+    ['5', 'Embeddings Test'],
+    ['6', 'Structured Output Test (Vercel only)']
   ]);
 
   console.log('\nSelect Mode:');
@@ -67,22 +70,24 @@ async function selectMode(): Promise<string> {
       console.log(`  ${key}. ${name} (Auto-test: Describe image)`);
     } else if (key === '5') {
       console.log(`  ${key}. ${name} (Auto-test: Generate embeddings)`);
+    } else if (key === '6') {
+      console.log(`  ${key}. ${name} (Auto-test: Generate structured data)`);
     }
   }
   console.log('='.repeat(50));
 
   return new Promise((resolve) => {
     const askForMode = () => {
-      rl.question('\nSelect a mode (1-5) or \'q\' to quit: ', (choice) => {
+      rl.question('\nSelect a mode (1-6) or \'q\' to quit: ', (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (choice === 'q') {
           console.log('\n👋 Goodbye!');
           cleanup();
         } else {
-          console.log('❌ Invalid choice. Please select 1, 2, 3, 4, or 5.');
+          console.log('❌ Invalid choice. Please select 1, 2, 3, 4, 5, or 6.');
           askForMode();
         }
       });
@@ -101,7 +106,11 @@ function displayProviders(mode?: string): Map<string, string> {
     ['6', 'OpenAI Responses'],
     ['7', 'OpenAI Responses Streaming'],
     ['8', 'OpenAI Chat Completions'],
-    ['9', 'OpenAI Chat Completions Streaming']
+    ['9', 'OpenAI Chat Completions Streaming'],
+    ['10', 'Vercel AI SDK (OpenAI)'],
+    ['11', 'Vercel AI SDK Streaming (OpenAI)'],
+    ['12', 'Vercel generateObject (OpenAI)'],
+    ['13', 'Vercel streamObject (OpenAI)']
   ]);
 
   // Filter providers for embeddings mode
@@ -112,6 +121,15 @@ function displayProviders(mode?: string): Map<string, string> {
       ['7', 'OpenAI Responses Streaming'],
       ['8', 'OpenAI Chat Completions'],
       ['9', 'OpenAI Chat Completions Streaming']
+    ]);
+  }
+  
+  // Filter providers for structured output mode
+  if (mode === '6') {
+    // Only Vercel Object providers support structured output
+    providers = new Map<string, string>([
+      ['12', 'Vercel generateObject (OpenAI)'],
+      ['13', 'Vercel streamObject (OpenAI)']
     ]);
   }
 
@@ -128,7 +146,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-9)';
+      let prompt = '\nSelect a provider (1-13)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -139,7 +157,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
       
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -178,6 +196,14 @@ function createProvider(choice: string): any {
       return new OpenAIChatProvider(posthog);
     case '9':
       return new OpenAIChatStreamingProvider(posthog);
+    case '10':
+      return new VercelAIProvider(posthog);
+    case '11':
+      return new VercelAIStreamingProvider(posthog);
+    case '12':
+      return new VercelGenerateObjectProvider(posthog);
+    case '13':
+      return new VercelStreamObjectProvider(posthog);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -326,6 +352,49 @@ async function runEmbeddingsTest(provider: any): Promise<{ success: boolean; err
   }
 }
 
+async function runStructuredOutputTest(provider: any): Promise<{ success: boolean; error: string | null }> {
+  const testQueries = [
+    'What is the weather like in New York?',
+    'Create a profile for a 25-year-old software developer who loves hiking and photography',
+    'Create a plan to learn TypeScript in 3 weeks'
+  ];
+
+  console.log(`\nStructured Output Test: ${provider.getName()}`);
+  console.log('-'.repeat(50));
+
+  try {
+    for (let i = 0; i < testQueries.length; i++) {
+      const query = testQueries[i];
+      console.log(`\nTest ${i + 1}: "${query}"`);
+      console.log();
+
+      // Reset conversation for clean test
+      provider.resetConversation();
+
+      // Check if provider supports streaming for structured output
+      if (provider.chatStream && typeof provider.chatStream === 'function') {
+        // Use streaming version
+        for await (const chunk of provider.chatStream(query)) {
+          process.stdout.write(chunk);
+        }
+        console.log(); // New line after streaming completes
+      } else {
+        // Use non-streaming version
+        const response = await provider.chat(query);
+        console.log(response);
+      }
+      console.log('-'.repeat(30));
+    }
+
+    console.log();
+    return { success: true, error: null };
+
+  } catch (error: any) {
+    logError(error);
+    return { success: false, error: error.message };
+  }
+}
+
 async function runImageTest(provider: any): Promise<{ success: boolean; error: string | null }> {
   // Create a simple test image (1x1 red pixel as base64)
   const base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
@@ -375,10 +444,20 @@ async function runAllTests(mode: string): Promise<void> {
     ];
   }
   
+  // Filter providers for structured output test (only those that support it)
+  if (mode === '6') {
+    // Only Vercel Object providers support structured output
+    providersInfo = [
+      ['12', 'Vercel generateObject (OpenAI)'],
+      ['13', 'Vercel streamObject (OpenAI)']
+    ];
+  }
+  
   const testName = mode === '2' ? 'Tool Call Test' : 
                    mode === '3' ? 'Message Test' : 
                    mode === '4' ? 'Image Test' : 
-                   mode === '5' ? 'Embeddings Test' : 'Unknown Test';
+                   mode === '5' ? 'Embeddings Test' :
+                   mode === '6' ? 'Structured Output Test' : 'Unknown Test';
   console.log(`\n🔄 Running ${testName} on all providers...`);
   console.log('='.repeat(60));
   console.log();
@@ -406,6 +485,8 @@ async function runAllTests(mode: string): Promise<void> {
         ? await runImageTest(provider)
         : mode === '5'
         ? await runEmbeddingsTest(provider)
+        : mode === '6'
+        ? await runStructuredOutputTest(provider)
         : { success: false, error: 'Unknown test mode' };
       
       results.push({
@@ -464,8 +545,8 @@ async function main(): Promise<void> {
     displayProviders(mode);
     
     // Allow mode change for all modes, 'all' option only for test modes
-    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5');
-    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5');
+    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6');
+    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6');
     const choice = await getProviderChoice(allowModeChange, allowAll);
     
     // Check if user wants to change mode
@@ -516,6 +597,12 @@ async function main(): Promise<void> {
     } else if (mode === '5') {
       // Embeddings Test - run test and loop back
       const result = await runEmbeddingsTest(provider);
+      if (!result.error) {
+        console.log();
+      }
+    } else if (mode === '6') {
+      // Structured Output Test - run test and loop back
+      const result = await runStructuredOutputTest(provider);
       if (!result.error) {
         console.log();
       }
