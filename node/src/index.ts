@@ -225,7 +225,7 @@ async function runChat(provider: any): Promise<boolean> {
             console.log('─'.repeat(50));
           }
         } catch (error: any) {
-          console.log(`❌ Error: ${error.message}`);
+          logError(error);
           console.log('─'.repeat(50));
         }
 
@@ -256,7 +256,7 @@ async function runToolCallTest(provider: any): Promise<{ success: boolean; error
     console.log();
     return { success: true, error: null };
   } catch (error: any) {
-    console.log(`❌ Error: ${error.message}`);
+    logError(error);
     return { success: false, error: error.message };
   }
 }
@@ -280,7 +280,7 @@ async function runMessageTest(provider: any): Promise<{ success: boolean; error:
     console.log();
     return { success: true, error: null };
   } catch (error: any) {
-    console.log(`❌ Error: ${error.message}`);
+    logError(error);
     return { success: false, error: error.message };
   }
 }
@@ -321,7 +321,7 @@ async function runEmbeddingsTest(provider: any): Promise<{ success: boolean; err
     return { success: true, error: null };
 
   } catch (error: any) {
-    console.log(`❌ Error: ${error.message}`);
+    logError(error);
     return { success: false, error: error.message };
   }
 }
@@ -348,7 +348,7 @@ async function runImageTest(provider: any): Promise<{ success: boolean; error: s
     console.log();
     return { success: true, error: null };
   } catch (error: any) {
-    console.log(`❌ Error: ${error.message}`);
+    logError(error);
     return { success: false, error: error.message };
   }
 }
@@ -535,6 +535,14 @@ const cleanup = async () => {
   }
   process.exit(0);
 };
+
+const logError = (error: unknown) => {
+  if (error instanceof Error) {
+    console.log(`❌ Error: ${error.stack}`);
+  } else {
+    console.error('❌ Error:', error);
+  }
+}
 
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
