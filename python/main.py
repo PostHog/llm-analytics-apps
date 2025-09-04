@@ -328,7 +328,8 @@ def run_all_tests(mode):
         ("5", "LangChain (OpenAI)"),
         ("6", "OpenAI Responses"),
         ("7", "OpenAI Responses Streaming"),
-        ("8", "OpenAI Chat Completions")
+        ("8", "OpenAI Chat Completions"),
+        ("9", "OpenAI Chat Completions Streaming")
     ]
     
     # Filter providers for embeddings test (only those that support it)
@@ -337,7 +338,8 @@ def run_all_tests(mode):
         providers_info = [
             ("6", "OpenAI Responses"),
             ("7", "OpenAI Responses Streaming"),
-            ("8", "OpenAI Chat Completions")
+            ("8", "OpenAI Chat Completions"),
+            ("9", "OpenAI Chat Completions Streaming")
         ]
     
     if mode == "2":
@@ -358,7 +360,7 @@ def run_all_tests(mode):
     results = []
     
     for provider_id, provider_name in providers_info:
-        print(f"[{provider_id}/8] Testing {provider_name}...")
+        print(f"[{provider_id}/9] Testing {provider_name}...")
         
         try:
             provider = create_provider(provider_id)

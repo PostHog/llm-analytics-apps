@@ -74,7 +74,6 @@ class AnthropicStreamingProvider(StreamingProvider):
         accumulated_content = ""
         assistant_content = []
         tools_used = []
-        current_content_block_index = None
         current_text_block = None
         
         # Process the stream events
@@ -108,8 +107,6 @@ class AnthropicStreamingProvider(StreamingProvider):
                 elif event.type == "content_block_start":
                     if hasattr(event, 'content_block'):
                         content_block = event.content_block
-                        if hasattr(event, 'index'):
-                            current_content_block_index = event.index
                         
                         if hasattr(content_block, 'type'):
                             if content_block.type == "text":
