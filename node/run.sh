@@ -18,12 +18,12 @@ cd "$SCRIPT_DIR"
 
 # Load environment variables from parent .env file
 if [ -f "../.env" ]; then
-    # Use a more robust method to load .env variables
-    # This handles comments, empty lines, and inline comments properly
-    set -a  # Enable automatic export of variables
-    source <(grep -E '^[^#]*=' ../.env | sed 's/#.*$//' | sed 's/[[:space:]]*$//')
-    set +a  # Disable automatic export
+    echo -e "${BLUE}📋 Loading environment variables from .env...${NC}"
+    set -a
+    source ../.env
+    set +a 
 fi
+
 
 echo -e "${BLUE}🚀 Unified AI Chatbot Setup${NC}"
 echo "=================================="
