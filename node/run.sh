@@ -19,10 +19,9 @@ cd "$SCRIPT_DIR"
 # Load environment variables from parent .env file
 if [ -f "../.env" ]; then
     echo -e "${BLUE}📋 Loading environment variables from .env...${NC}"
-    # Simple and reliable method to load .env variables
-    set -a  # Enable automatic export of variables
+    set -a
     source ../.env
-    set +a  # Disable automatic export
+    set +a 
 fi
 
 
