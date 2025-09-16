@@ -9,7 +9,7 @@ class LiteLLMProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
         # Set PostHog configuration environment variables
         os.environ["POSTHOG_API_KEY"] = os.getenv("POSTHOG_API_KEY", "")
-        os.environ["POSTHOG_HOST"] = os.getenv("POSTHOG_HOST", "https://app.posthog.com")
+        os.environ["POSTHOG_API_URL"] = os.getenv("POSTHOG_HOST", "https://app.posthog.com")
         
         # Use string-based callbacks - our fixed PostHogLogger will handle both sync and async
         try:
