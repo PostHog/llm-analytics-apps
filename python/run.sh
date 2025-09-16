@@ -52,13 +52,33 @@ pip install --upgrade pip
 # Install requirements
 echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 
-# Check if using local PostHog path or package version
-if [ -n "$POSTHOG_PYTHON_PATH" ]; then
-    echo -e "${YELLOW}📦 Using local posthog-python from: $POSTHOG_PYTHON_PATH${NC}"
-    # First install other requirements (excluding posthog)
-    grep -v "posthog-python" requirements.txt | grep -v "^-e" | pip install -r /dev/stdin
-    # Then install local posthog as editable
-    pip install -e "$POSTHOG_PYTHON_PATH"
+# Check if using local paths or package versions
+if [ -n "$POSTHOG_PYTHON_PATH" ] || [ -n "$LITELLM_PATH" ]; then
+    # Install other requirements first (excluding packages we'll install locally)
+    requirements_filter="requirements.txt"
+    
+    if [ -n "$POSTHOG_PYTHON_PATH" ]; then
+        echo -e "${YELLOW}📦 Using local posthog-python from: $POSTHOG_PYTHON_PATH${NC}"
+        requirements_filter=$(grep -v "posthog-python" requirements.txt | grep -v "^posthog" | grep -v "^-e")
+    fi
+    
+    if [ -n "$LITELLM_PATH" ]; then
+        echo -e "${YELLOW}📦 Using local litellm from: $LITELLM_PATH${NC}"
+        requirements_filter=$(echo "$requirements_filter" | grep -v "litellm")
+    fi
+    
+    # Install filtered requirements
+    echo "$requirements_filter" | pip install -r /dev/stdin
+    
+    # Install local packages as editable
+    if [ -n "$POSTHOG_PYTHON_PATH" ]; then
+        pip install -e "$POSTHOG_PYTHON_PATH"
+    fi
+    
+    if [ -n "$LITELLM_PATH" ]; then
+        pip install -e "$LITELLM_PATH"
+    fi
+    
 elif [ -n "$POSTHOG_PYTHON_VERSION" ]; then
     echo -e "${YELLOW}📦 Installing specific posthog version: $POSTHOG_PYTHON_VERSION${NC}"
     # Install other requirements first
