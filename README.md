@@ -53,6 +53,14 @@ The `run.sh` script will automatically:
 - **Image Test**: Tests image description capabilities
 - **Embeddings Test**: Tests embedding generation (OpenAI only)
 
+### 🎯 LLM Trace Generator
+An interactive tool for creating complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder for creating arbitrarily complex structures.
+
+```bash
+cd python/trace-generator
+./run.sh
+```
+
 ## 🛠️ Development
 
 ### Local Development with PostHog SDKs
