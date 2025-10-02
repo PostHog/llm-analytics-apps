@@ -18,7 +18,9 @@ cd "$SCRIPT_DIR"
 
 # Load environment variables from parent .env file
 if [ -f "../.env" ]; then
-    export $(grep -v '^#' ../.env | xargs)
+    set -a  # Automatically export all variables
+    source <(grep -v '^#' ../.env | grep -v '^$')
+    set +a  # Stop automatically exporting
 fi
 
 echo -e "${BLUE}🚀 Unified AI Chatbot Setup${NC}"
