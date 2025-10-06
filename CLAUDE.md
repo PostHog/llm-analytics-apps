@@ -86,6 +86,10 @@ npm run clean    # Remove dist/ directory
 
 ```bash
 cd python/trace-generator && ./run.sh
+
+# Or use the make target
+make run-trace-generator
+make run-trace-generator-debug
 ```
 
 Creates complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder.
