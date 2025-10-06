@@ -17,11 +17,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Load environment variables from parent .env file
+# Only set variables that aren't already in the environment
 if [ -f "../.env" ]; then
     echo -e "${BLUE}📋 Loading environment variables from .env...${NC}"
-    set -a
-    source ../.env
-    set +a 
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z $key ]] && continue
+        # Only export if not already set
+        if [ -z "${!key}" ]; then
+            export "$key=$value"
+        fi
+    done < <(grep -v '^#' ../.env | grep -v '^$')
 fi
 
 
