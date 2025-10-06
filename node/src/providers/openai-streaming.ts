@@ -83,7 +83,7 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     
     this.messages.push(userMessage);
 
-    const stream = await this.client.responses.create({
+    const requestParams = {
       model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
       max_output_tokens: 200,
       temperature: 0.7,
@@ -92,7 +92,13 @@ export class OpenAIStreamingProvider extends StreamingProvider {
       instructions: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.',
       tools: this.tools,
       stream: true
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("OpenAI Responses Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.responses.create(requestParams);
 
     let accumulatedContent = '';
     const finalOutput: any[] = [];
@@ -184,7 +190,7 @@ export class OpenAIStreamingProvider extends StreamingProvider {
           toolResultsText += weatherResult;
         }
       }
-      
+
       if (toolResultsText) {
         const assistantMessage: Message = {
           role: 'assistant',
@@ -192,6 +198,15 @@ export class OpenAIStreamingProvider extends StreamingProvider {
         };
         this.messages.push(assistantMessage);
       }
+    }
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("OpenAI Responses Streaming API Response (completed)", {
+        accumulatedContent: accumulatedContent,
+        toolCalls: toolCalls,
+        finalOutput: finalOutput
+      });
     }
   }
 

@@ -89,22 +89,29 @@ class OpenAIChatStreamingProvider(StreamingProvider):
         
         # Use vision model for images
         model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        
-        # Create streaming response
-        stream = self.client.chat.completions.create(
-            model=model_name,
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            messages=self.messages,
-            tools=self.tools,
-            tool_choice="auto",
-            stream=True,
-            stream_options={
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "messages": self.messages,
+            "tools": self.tools,
+            "tool_choice": "auto",
+            "stream": True,
+            "stream_options": {
                 "include_usage": True
             }
-        )
-        
+        }
+
+        # Debug: Log the API request
+        if self.debug_mode:
+            self._debug_log("OpenAI Chat Completions Streaming API Request", request_params)
+
+        # Create streaming response
+        stream = self.client.chat.completions.create(**request_params)
+
         accumulated_content = ""
         tool_calls = []
         tool_calls_by_index = {}
@@ -182,7 +189,14 @@ class OpenAIChatStreamingProvider(StreamingProvider):
             assistant_message["tool_calls"] = tool_calls
         
         self.messages.append(assistant_message)
-        
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("OpenAI Chat Completions Streaming API Response (completed)", {
+                "accumulated_content": accumulated_content,
+                "tool_calls": tool_calls
+            })
+
         # Add tool results to messages if any tools were called
         for tool_call in tool_calls:
             if tool_call["function"]["name"] == "get_weather":
@@ -190,7 +204,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                     args = json.loads(tool_call["function"]["arguments"])
                     location = args.get("location", "unknown")
                     weather_result = self.get_weather(location)
-                    
+
                     tool_result_message = {
                         "role": "tool",
                         "tool_call_id": tool_call["id"],

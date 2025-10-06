@@ -67,7 +67,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
     });
 
     try {
-      const result = await streamText({
+      const requestParams = {
         model: model,
         messages: this.messages as any,
         maxOutputTokens: 200,
@@ -78,12 +78,18 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             inputSchema: z.object({
               location: z.string().describe('The city or location name to get weather for')
             }),
-            execute: async ({ location }) => {
+            execute: async ({ location }: { location: string }) => {
               return this.getWeather(location);
             }
           }
         }
-      });
+      };
+
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK Streaming (OpenAI) API Request", requestParams);
+      }
+
+      const result = await streamText(requestParams);
 
       let accumulatedContent = '';
       const toolCalls: any[] = [];
@@ -142,7 +148,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             toolResultsText += this.formatToolResult('get_weather', weatherResult);
           }
         }
-        
+
         if (toolResultsText) {
           const assistantMessage: Message = {
             role: 'assistant',
@@ -150,6 +156,14 @@ export class VercelAIStreamingProvider extends StreamingProvider {
           };
           this.messages.push(assistantMessage);
         }
+      }
+
+      // Debug: Log the completed stream response
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK Streaming (OpenAI) API Response (completed)", {
+          accumulatedContent: accumulatedContent,
+          toolCalls: toolCalls
+        });
       }
     } catch (error: any) {
       console.error('Error in Vercel AI streaming chat:', error);

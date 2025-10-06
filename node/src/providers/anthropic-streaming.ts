@@ -64,7 +64,7 @@ export class AnthropicStreamingProvider extends StreamingProvider {
     };
     this.messages.push(userMessage);
 
-    const stream = await this.client.messages.create({
+    const requestParams = {
       model: "claude-sonnet-4-20250514",
       max_tokens: 200,
       temperature: 0.7,
@@ -72,7 +72,13 @@ export class AnthropicStreamingProvider extends StreamingProvider {
       tools: this.tools,
       messages: this.messages,
       stream: true,
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("Anthropic Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.messages.create(requestParams);
 
     let accumulatedContent = "";
     const assistantContent: any[] = [];
@@ -178,6 +184,15 @@ export class AnthropicStreamingProvider extends StreamingProvider {
       content: assistantContent.length > 0 ? assistantContent : [{type: "text", text: accumulatedContent || ""}],
     };
     this.messages.push(assistantMessage);
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("Anthropic Streaming API Response (completed)", {
+        accumulatedContent: accumulatedContent,
+        assistantContent: assistantContent,
+        toolsUsed: toolsUsed
+      });
+    }
 
     // If tools were used, add tool results to messages
     for (const tool of toolsUsed) {

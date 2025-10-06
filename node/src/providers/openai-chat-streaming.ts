@@ -90,7 +90,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     };
     this.messages.push(userMessage);
 
-    const stream = await this.client.chat.completions.create({
+    const requestParams = {
       model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',
       max_tokens: 200,
       temperature: 0.7,
@@ -102,7 +102,13 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
       stream_options: {
         include_usage: true
       }
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("OpenAI Chat Completions Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.chat.completions.create(requestParams);
 
     let accumulatedContent = '';
     const toolCalls: any[] = [];
@@ -182,6 +188,14 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     }
 
     this.messages.push(assistantMessage);
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("OpenAI Chat Completions Streaming API Response (completed)", {
+        accumulatedContent: accumulatedContent,
+        toolCalls: toolCalls
+      });
+    }
 
     // Add tool results to messages if any tools were called
     for (const toolCall of toolCalls) {

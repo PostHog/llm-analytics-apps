@@ -58,18 +58,25 @@ class AnthropicStreamingProvider(StreamingProvider):
             "content": user_content
         }
         self.messages.append(user_message)
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "tools": self.tools,
+            "messages": self.messages,
+            "stream": True
+        }
+
+        # Debug: Log the API request (no response for streaming)
+        if self.debug_mode:
+            self._debug_log("Anthropic Streaming API Request", request_params)
+
         # Create streaming response using create() with stream=True
         # The PostHog wrapper's stream() method expects stream=True to be passed
-        stream = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            tools=self.tools,
-            messages=self.messages,
-            stream=True  # This is the key parameter for streaming
-        )
+        stream = self.client.messages.create(**request_params)
         
         accumulated_content = ""
         assistant_content = []
@@ -177,6 +184,15 @@ class AnthropicStreamingProvider(StreamingProvider):
             "content": assistant_content if assistant_content else [{"type": "text", "text": accumulated_content or ""}]
         }
         self.messages.append(assistant_message)
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("Anthropic Streaming API Response (completed)", {
+                "accumulated_content": accumulated_content,
+                "assistant_content": assistant_content,
+                "tools_used": tools_used,
+                "event_count": event_count
+            })
         
         # If tools were used, add tool results to messages
         for tool in tools_used:

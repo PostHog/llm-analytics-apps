@@ -78,19 +78,26 @@ class OpenAIStreamingProvider(StreamingProvider):
         
         # Use vision model for images
         model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_output_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "input": self.messages,
+            "instructions": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
+            "tools": self.tools,
+            "stream": True
+        }
+
+        # Debug: Log the API request
+        if self.debug_mode:
+            self._debug_log("OpenAI Responses Streaming API Request", request_params)
+
         # Create streaming response
-        stream = self.client.responses.create(
-            model=model_name,
-            max_output_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            input=self.messages,
-            instructions="You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
-            tools=self.tools,
-            stream=True
-        )
-        
+        stream = self.client.responses.create(**request_params)
+
         accumulated_content = ""
         final_output = []
         tool_calls = []
@@ -177,13 +184,21 @@ class OpenAIStreamingProvider(StreamingProvider):
                         tool_results_text += weather_result
                     except json.JSONDecodeError:
                         pass
-            
+
             if tool_results_text:
                 assistant_message = {
                     "role": "assistant",
                     "content": tool_results_text
                 }
                 self.messages.append(assistant_message)
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("OpenAI Responses Streaming API Response (completed)", {
+                "accumulated_content": accumulated_content,
+                "tool_calls": tool_calls,
+                "final_output": final_output
+            })
     
     def chat(self, user_input: str, base64_image: Optional[str] = None) -> str:
         """Non-streaming chat for compatibility"""

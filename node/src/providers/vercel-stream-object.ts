@@ -134,7 +134,7 @@ export class VercelStreamObjectProvider extends StreamingProvider {
         prompt = `Create a detailed task plan based on: "${userInput}". Break it down into specific, actionable steps.`;
       }
 
-      const result = await streamObject({
+      const requestParams = {
         model: model,
         messages: [
           ...this.messages.slice(0, -1), // All previous messages except the last user message
@@ -143,7 +143,13 @@ export class VercelStreamObjectProvider extends StreamingProvider {
         schema: schema,
         maxOutputTokens: 1000,
         temperature: 0.7,
-      });
+      };
+
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK - streamObject (OpenAI) API Request", requestParams);
+      }
+
+      const result = await streamObject(requestParams);
 
       yield `🔄 Generating structured ${type} data...\n\n`;
 
@@ -186,6 +192,15 @@ export class VercelStreamObjectProvider extends StreamingProvider {
         content: `Generated ${type} data: ${JSON.stringify(finalObject, null, 2)}`
       };
       this.messages.push(assistantMessage);
+
+      // Debug: Log the completed stream response
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK - streamObject (OpenAI) API Response (completed)", {
+          type: type,
+          finalObject: finalObject,
+          finalFormatted: finalFormatted
+        });
+      }
 
     } catch (error: any) {
       console.error('Error in Vercel streamObject streaming:', error);

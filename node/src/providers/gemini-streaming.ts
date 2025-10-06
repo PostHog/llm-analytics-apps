@@ -81,12 +81,18 @@ export class GeminiStreamingProvider extends StreamingProvider {
     });
 
     // Create the streaming response
-    const stream = await this.client.models.generateContentStream({
+    const requestParams = {
       model: 'gemini-2.5-flash',
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
       contents: this.history,
       config: this.config
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("Google Gemini Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.models.generateContentStream(requestParams);
 
     let accumulatedText = "";
     const modelParts: any[] = [];
@@ -139,7 +145,16 @@ export class GeminiStreamingProvider extends StreamingProvider {
         parts: modelParts
       });
     }
-    
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("Google Gemini Streaming API Response (completed)", {
+        accumulatedText: accumulatedText,
+        modelParts: modelParts,
+        toolResults: toolResults
+      });
+    }
+
     // Add tool results to history if any
     for (const toolResult of toolResults) {
       this.history.push({
