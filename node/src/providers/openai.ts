@@ -80,7 +80,7 @@ export class OpenAIProvider extends BaseProvider {
     
     this.messages.push(userMessage);
 
-    const message = await this.client.responses.create({
+    const requestParams = {
       model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
       max_output_tokens: 200,
       temperature: 0.7,
@@ -88,7 +88,10 @@ export class OpenAIProvider extends BaseProvider {
       input: this.messages,
       instructions: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.',
       tools: this.tools
-    });
+    };
+
+    const message = await this.client.responses.create(requestParams);
+    this.debugApiCall("OpenAI Responses", requestParams, message);
 
     const displayParts: string[] = [];
     let assistantContent = '';

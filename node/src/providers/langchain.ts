@@ -95,17 +95,23 @@ export class LangChainProvider extends BaseProvider {
     
     this.langchainMessages.push(userMessage);
 
-    const model = new ChatOpenAI({ 
-      openAIApiKey: process.env.OPENAI_API_KEY, 
+    const model = new ChatOpenAI({
+      openAIApiKey: process.env.OPENAI_API_KEY,
       temperature: 0,
       modelName: base64Image ? 'gpt-4o' : 'gpt-4o-mini'  // Use vision model for images
     });
     const modelWithTools = model.bindTools(this.langchainTools);
 
+    const requestParams = {
+      messages: this.langchainMessages,
+      callbacks: [this.callbackHandler]
+    };
+
     const response = await modelWithTools.invoke(
       this.langchainMessages,
       { callbacks: [this.callbackHandler] }
     );
+    this.debugApiCall("LangChain (OpenAI)", requestParams, response);
 
     const displayParts: string[] = [];
 

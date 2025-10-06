@@ -65,8 +65,8 @@ export class VercelAIProvider extends BaseProvider {
         posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
         posthogPrivacyMode: false
       });
-      
-      const { text, toolResults } = await generateText({
+
+      const requestParams = {
         model: model,
         messages: this.messages as any,
         maxOutputTokens: 200,
@@ -77,12 +77,15 @@ export class VercelAIProvider extends BaseProvider {
             inputSchema: z.object({
               location: z.string().describe('The city or location name to get weather for')
             }),
-            execute: async ({ location }) => {
+            execute: async ({ location }: { location: string }) => {
               return this.getWeather(location);
             }
           }
         }
-      });
+      };
+
+      const { text, toolResults } = await generateText(requestParams);
+      this.debugApiCall("Vercel AI SDK (OpenAI)", requestParams, { text, toolResults });
 
       if (text) {
         displayParts.push(text);

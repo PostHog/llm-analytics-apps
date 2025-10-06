@@ -91,12 +91,18 @@ class LangChainProvider(BaseProvider):
         model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
         model = ChatOpenAI(openai_api_key=self.OPENAI_API_KEY, temperature=0, model_name=model_name)
         model_with_tools = model.bind_tools(self.langchain_tools)
-        
-        response = model_with_tools.invoke(
-            self.langchain_messages,
-            config={"callbacks": [self.callback_handler]}
-        )
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "input": self.langchain_messages,
+            "config": {"callbacks": [self.callback_handler]}
+        }
+
+        response = model_with_tools.invoke(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("LangChain (OpenAI)", request_params, response)
+
         # Collect display parts
         display_parts = []
         

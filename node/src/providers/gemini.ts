@@ -77,12 +77,15 @@ export class GeminiProvider extends BaseProvider {
       parts: parts
     });
 
-    const message = await this.client.models.generateContent({
+    const requestParams = {
       model: 'gemini-2.5-flash',
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
       contents: this.history,
       config: this.config
-    });
+    };
+
+    const message = await this.client.models.generateContent(requestParams);
+    this.debugApiCall("Google Gemini", requestParams, message);
 
     const displayParts: string[] = [];
     const modelParts: any[] = [];

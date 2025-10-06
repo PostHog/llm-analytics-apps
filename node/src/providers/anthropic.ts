@@ -62,14 +62,20 @@ export class AnthropicProvider extends BaseProvider {
     };
     this.messages.push(userMessage);
 
-    const message = await this.client.messages.create({
+    // Prepare API request parameters
+    const requestParams = {
       model: "claude-sonnet-4-20250514",
       max_tokens: 200,
       temperature: 0.7,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || "user-hog",
       tools: this.tools,
       messages: this.messages,
-    });
+    };
+
+    const message = await this.client.messages.create(requestParams);
+
+    // Debug: Log the API call (request + response)
+    this.debugApiCall("Anthropic", requestParams, message);
 
     const assistantContent: any[] = [];
     const toolResults: string[] = [];

@@ -90,16 +90,23 @@ class OpenAIChatProvider(BaseProvider):
         # Send all messages in conversation history using PostHog wrapper
         # Use vision model for images
         model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        response = self.client.chat.completions.create(
-            model=model_name,
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            messages=self.messages,
-            tools=self.tools,
-            tool_choice="auto"
-        )
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "messages": self.messages,
+            "tools": self.tools,
+            "tool_choice": "auto"
+        }
+
+        response = self.client.chat.completions.create(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("OpenAI Chat Completions", request_params, response)
+
         # Collect response parts for display
         display_parts = []
         assistant_content = ""

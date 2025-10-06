@@ -88,7 +88,7 @@ export class OpenAIChatProvider extends BaseProvider {
     };
     this.messages.push(userMessage);
 
-    const response = await this.client.chat.completions.create({
+    const requestParams = {
       model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
       max_tokens: 200,
       temperature: 0.7,
@@ -96,7 +96,10 @@ export class OpenAIChatProvider extends BaseProvider {
       messages: this.messages,
       tools: this.tools,
       tool_choice: 'auto'
-    });
+    };
+
+    const response = await this.client.chat.completions.create(requestParams);
+    this.debugApiCall("OpenAI Chat Completions", requestParams, response);
 
     const displayParts: string[] = [];
     let assistantContent = '';

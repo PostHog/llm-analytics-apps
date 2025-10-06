@@ -57,16 +57,22 @@ class AnthropicProvider(BaseProvider):
             "content": user_content
         }
         self.messages.append(user_message)
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "tools": self.tools,
+            "messages": self.messages
+        }
+
         # Send all messages in conversation history
-        message = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            tools=self.tools,
-            messages=self.messages
-        )
+        message = self.client.messages.create(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("Anthropic", request_params, message)
 
         # Process all content blocks to handle both text and tool calls
         assistant_content = []

@@ -75,19 +75,24 @@ class OpenAIProvider(BaseProvider):
             "content": user_content
         }
         self.messages.append(user_message)
-        
+
         # Send all messages in conversation history
         # Use vision model for images
         model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        message = self.client.responses.create(
-            model=model_name,
-            max_output_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            input=self.messages,
-            instructions="You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
-            tools=self.tools
-        )
+        request_params = {
+            "model": model_name,
+            "max_output_tokens": 200,
+            "temperature": 0.7,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "input": self.messages,
+            "instructions": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
+            "tools": self.tools
+        }
+
+        message = self.client.responses.create(**request_params)
+
+        # Debug: Log the API call
+        self._debug_api_call("OpenAI", request_params, message)
         
         # Collect response parts for display
         display_parts = []

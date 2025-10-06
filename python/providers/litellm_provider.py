@@ -112,20 +112,26 @@ class LiteLLMProvider(BaseProvider):
         self.messages.append(user_message)
         
         try:
-            # Send all messages in conversation history
-            response = litellm.completion(
-                model=model_to_use,
-                messages=self.messages,
-                tools=self.tools,
-                tool_choice="auto",
-                max_tokens=500,
-                temperature=0.7,
-                metadata={
+            # Prepare API request parameters
+            request_params = {
+                "model": model_to_use,
+                "messages": self.messages,
+                "tools": self.tools,
+                "tool_choice": "auto",
+                "max_tokens": 500,
+                "temperature": 0.7,
+                "metadata": {
                     "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
                     "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
                 }
-            )
-            
+            }
+
+            # Send all messages in conversation history
+            response = litellm.completion(**request_params)
+
+            # Debug: Log the API call (request + response)
+            self._debug_api_call(f"LiteLLM ({self.model})", request_params, response)
+
             # Extract the assistant's response
             assistant_message = response.choices[0].message
             
@@ -164,17 +170,23 @@ class LiteLLMProvider(BaseProvider):
                 
                 # Get final response after tool execution
                 try:
-                    final_response = litellm.completion(
-                        model=model_to_use,
-                        messages=self.messages,
-                        max_tokens=200,
-                        temperature=0.7,
-                        metadata={
+                    # Prepare API request parameters for final response
+                    final_request_params = {
+                        "model": model_to_use,
+                        "messages": self.messages,
+                        "max_tokens": 200,
+                        "temperature": 0.7,
+                        "metadata": {
                             "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
                             "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
                         }
-                    )
-                    
+                    }
+
+                    final_response = litellm.completion(**final_request_params)
+
+                    # Debug: Log the API call (request + response)
+                    self._debug_api_call(f"LiteLLM ({self.model})", final_request_params, final_response)
+
                     final_content = final_response.choices[0].message.content
                     if final_content:
                         display_parts.append(final_content)

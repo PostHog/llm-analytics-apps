@@ -224,7 +224,7 @@ export class VercelGenerateObjectProvider extends BaseProvider {
         prompt = `Create a detailed task plan based on: "${userInput}". Break it down into specific, actionable steps.`;
       }
 
-      const result = await generateObject({
+      const requestParams = {
         model: model,
         messages: [
           ...this.messages.slice(0, -1), // All previous messages except the last user message
@@ -233,7 +233,10 @@ export class VercelGenerateObjectProvider extends BaseProvider {
         schema: schema,
         maxOutputTokens: 1000,
         temperature: 0.7,
-      });
+      };
+
+      const result = await generateObject(requestParams);
+      this.debugApiCall("Vercel AI SDK - generateObject (OpenAI)", requestParams, result);
 
       const formatted = this.formatStructuredData(result.object, type);
       

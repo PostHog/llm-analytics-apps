@@ -72,14 +72,20 @@ class GeminiProvider(BaseProvider):
             "role": "user",
             "parts": parts
         })
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": "gemini-2.5-flash",
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "contents": self.history,
+            "config": self.config
+        }
+
         # Send all messages in conversation history
-        message = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            contents=self.history,
-            config=self.config
-        )
+        message = self.client.models.generate_content(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("Google Gemini", request_params, message)
 
         # Collect response parts for display
         display_parts = []
