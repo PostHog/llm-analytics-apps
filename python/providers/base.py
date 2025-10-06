@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Generator
 from posthog import Posthog
+import os
+import json
 
 class BaseProvider(ABC):
     """Base class for all AI providers"""
-    
+
     def __init__(self, posthog_client: Posthog):
         self.posthog_client = posthog_client
         self.messages: List[Dict[str, Any]] = []
         self.tools: List[Dict[str, Any]] = []
+        self.debug_mode = os.getenv('DEBUG') == '1'
         self._initialize_tools()
         
     def _initialize_tools(self):
@@ -47,6 +50,60 @@ class BaseProvider(ABC):
         if tool_name == "get_weather":
             return f"🌤️  Weather: {result}"
         return result
+
+    def _debug_log(self, title: str, data: Any, truncate: bool = True):
+        """Log debug information in a clear, formatted way"""
+        if not self.debug_mode:
+            return
+
+        print("\n" + "=" * 80)
+        print(f"🐛 DEBUG: {title}")
+        print("=" * 80)
+
+        if isinstance(data, (dict, list)):
+            json_str = json.dumps(data, indent=2, default=str)
+            # Truncate very long outputs
+            if truncate and len(json_str) > 5000:
+                json_str = json_str[:5000] + "\n... (truncated)"
+            print(json_str)
+        else:
+            data_str = str(data)
+            if truncate and len(data_str) > 5000:
+                data_str = data_str[:5000] + "\n... (truncated)"
+            print(data_str)
+
+        print("=" * 80 + "\n")
+
+    def _debug_api_call(self, provider_name: str, request_data: Any, response_data: Any = None):
+        """
+        Simplified debug logging for API calls.
+        Just pass the request and optionally response objects - they'll be converted to JSON automatically.
+
+        Usage:
+            # Log request only (before API call)
+            self._debug_api_call("Anthropic", request_params)
+
+            # Log both request and response (after API call)
+            self._debug_api_call("Anthropic", request_params, response)
+        """
+        if not self.debug_mode:
+            return
+
+        # Convert objects to dict for JSON serialization
+        def to_dict(obj):
+            if hasattr(obj, 'model_dump'):  # Pydantic models
+                return obj.model_dump()
+            elif hasattr(obj, '__dict__'):  # Regular objects
+                return obj.__dict__
+            elif isinstance(obj, (dict, list, str, int, float, bool, type(None))):
+                return obj
+            else:
+                return str(obj)
+
+        self._debug_log(f"{provider_name} API Request", to_dict(request_data))
+
+        if response_data is not None:
+            self._debug_log(f"{provider_name} API Response", to_dict(response_data))
 
 
 class StreamingProvider(BaseProvider):
