@@ -78,17 +78,11 @@ class EventGenerator:
 
     @classmethod
     def generate_trace_event(cls, trace_id: str, span_name: str = "chat_completion") -> Dict[str, Any]:
-        """Generate a realistic trace event"""
-        user_query = cls._random_choice(cls.SAMPLE_USER_QUERIES)
-        ai_response = cls._random_choice(cls.SAMPLE_AI_RESPONSES)
-
+        """Generate a minimal trace event - app computes aggregates from children"""
         return {
             "event": "$ai_trace",
             "properties": {
                 "$ai_trace_id": trace_id,
-                "$ai_input_state": [{"role": "user", "content": user_query}],
-                "$ai_output_state": [{"role": "assistant", "content": ai_response}],
-                "$ai_latency": round(0.5 + (time.time() % 3), 3),
                 "$ai_span_name": span_name,
                 "$ai_is_error": False
             },
@@ -201,12 +195,16 @@ class EventGenerator:
 
     @classmethod
     def generate_custom_generation_event(cls, trace_id: str, model: str, purpose: str, name: str,
-                                         parent_id: Optional[str] = None) -> Dict[str, Any]:
-        """Generate a custom generation event with specific purpose"""
+                                         parent_id: Optional[str] = None, user_input: Optional[str] = None,
+                                         assistant_output: Optional[str] = None) -> Dict[str, Any]:
+        """Generate a custom generation event with specific purpose or manual text"""
         span_id = cls.generate_span_id()
 
-        # Generate content based on purpose
-        input_content, output_content = cls._get_purpose_content(purpose)
+        # Use manual text if provided, otherwise generate content based on purpose
+        if user_input is not None and assistant_output is not None:
+            input_content, output_content = user_input, assistant_output
+        else:
+            input_content, output_content = cls._get_purpose_content(purpose)
 
         properties = {
             "$ai_trace_id": trace_id,
@@ -354,9 +352,12 @@ class TraceBuilder:
         self.events.append(event)
         return span_id
 
-    def add_custom_generation_event(self, model: str, purpose: str, name: str, parent_id: Optional[str] = None) -> str:
-        """Add a custom generation event with specific purpose and return the span ID"""
-        event = EventGenerator.generate_custom_generation_event(self.trace_id, model, purpose, name, parent_id)
+    def add_custom_generation_event(self, model: str, purpose: str, name: str, parent_id: Optional[str] = None,
+                                    user_input: Optional[str] = None, assistant_output: Optional[str] = None) -> str:
+        """Add a custom generation event with specific purpose or manual text and return the span ID"""
+        event = EventGenerator.generate_custom_generation_event(
+            self.trace_id, model, purpose, name, parent_id, user_input, assistant_output
+        )
         span_id = event["properties"]["$ai_span_id"]
         self.events.append(event)
         return span_id
@@ -368,15 +369,23 @@ class TraceBuilder:
         self.events.append(event)
         return span_id
 
-    def build_simple_chat_trace(self) -> Dict[str, Any]:
+    def build_simple_chat_trace(self, model: str = "gpt-4o-mini", user_input: Optional[str] = None,
+                                assistant_output: Optional[str] = None) -> Dict[str, Any]:
         """Build a simple chat conversation trace"""
         self.reset()
 
         # Add trace event
         self.add_trace_event("simple_chat")
 
-        # Add main generation event
-        generation_id = self.add_generation_event("gpt-4o-mini", self.trace_id)
+        # Add main generation event with custom text support
+        generation_id = self.add_custom_generation_event(
+            model=model,
+            purpose="general",
+            name="chat_completion",
+            parent_id=self.trace_id,
+            user_input=user_input,
+            assistant_output=assistant_output
+        )
 
         return {
             "trace_id": self.trace_id,
@@ -467,7 +476,11 @@ class TraceBuilder:
             elif node_type == "generation":
                 model = node_config.get("model", "gpt-4o-mini")
                 purpose = node_config.get("purpose", "general")
-                node_id = self.add_custom_generation_event(model, purpose, node_name, parent_id)
+                user_input = node_config.get("user_input")
+                assistant_output = node_config.get("assistant_output")
+                node_id = self.add_custom_generation_event(
+                    model, purpose, node_name, parent_id, user_input, assistant_output
+                )
                 node_ids[node_name] = node_id
 
             elif node_type == "embedding":
@@ -624,7 +637,31 @@ class TraceGenerator:
         print("This creates a basic conversation with user input and AI response")
 
         try:
-            result = self.builder.build_simple_chat_trace()
+            # Ask if they want to customize the generation
+            customize = input("\nCustomize generation text? (y/n, default: n): ").strip().lower()
+
+            user_input = None
+            assistant_output = None
+            model = "gpt-4o-mini"
+
+            if customize in ["y", "yes"]:
+                print("\nEnter custom text for the generation:")
+                user_input = input("User input: ").strip()
+                assistant_output = input("Assistant output: ").strip()
+
+                if not user_input or not assistant_output:
+                    print("⚠️  Both fields required for custom text. Using preset generation.")
+                    user_input = None
+                    assistant_output = None
+
+            # Ask for model
+            models = ["gpt-4o", "gpt-4o-mini", "claude-3-sonnet", "claude-3-haiku"]
+            print(f"\nAvailable models: {', '.join(models)}")
+            model_choice = input("Model (default: gpt-4o-mini): ").strip()
+            if model_choice in models:
+                model = model_choice
+
+            result = self.builder.build_simple_chat_trace(model, user_input, assistant_output)
             self.display_trace_summary(result)
 
             if self.confirm_send():
@@ -876,10 +913,10 @@ class TraceGenerator:
 
     def configure_generation(self) -> Dict[str, Any]:
         """Configure generation-specific properties"""
-        # Get purpose/role
+        # Get purpose (including custom as a peer option)
         purposes = [
             "general", "planning", "tool_call", "synthesis",
-            "reasoning", "code_generation", "summarization", "qa"
+            "reasoning", "code_generation", "summarization", "qa", "custom"
         ]
 
         print(f"\nGeneration purposes: {', '.join(purposes)}")
@@ -894,10 +931,27 @@ class TraceGenerator:
         if not model or model not in models:
             model = "gpt-4o-mini"
 
-        return {
-            "purpose": purpose,
-            "model": model
-        }
+        # If custom, prompt for manual text
+        if purpose == "custom":
+            print("\nEnter custom text for this generation:")
+            user_input = input("User input: ").strip()
+            assistant_output = input("Assistant output: ").strip()
+
+            if not user_input or not assistant_output:
+                print("⚠️  Both user input and assistant output are required. Using defaults.")
+                user_input = "Sample user query"
+                assistant_output = "Sample assistant response"
+
+            return {
+                "model": model,
+                "user_input": user_input,
+                "assistant_output": assistant_output
+            }
+        else:
+            return {
+                "purpose": purpose,
+                "model": model
+            }
 
     def configure_embedding(self) -> Dict[str, Any]:
         """Configure embedding-specific properties"""
@@ -933,8 +987,13 @@ class TraceGenerator:
 
             # Add type-specific properties
             if node["type"] == "generation":
-                node_config["purpose"] = node.get("purpose", "general")
                 node_config["model"] = node.get("model", "gpt-4o-mini")
+                # Preserve manual text if provided, otherwise use purpose
+                if "user_input" in node and "assistant_output" in node:
+                    node_config["user_input"] = node["user_input"]
+                    node_config["assistant_output"] = node["assistant_output"]
+                else:
+                    node_config["purpose"] = node.get("purpose", "general")
             elif node["type"] == "embedding":
                 node_config["model"] = node.get("model", "text-embedding-3-small")
 
