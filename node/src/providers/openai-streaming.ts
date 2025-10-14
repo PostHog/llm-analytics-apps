@@ -165,15 +165,18 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     }
 
     // Save assistant message with accumulated content or tool results
+    const assistantContentItems: any[] = [];
+
+    // Add text content if any
     if (accumulatedContent) {
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: accumulatedContent
-      };
-      this.messages.push(assistantMessage);
-    } else if (toolCalls.length > 0 && toolCalls.some(tc => tc.arguments)) {
-      // If there was a tool call but no text content, save the tool result as assistant message
-      let toolResultsText = '';
+      assistantContentItems.push({
+        type: 'output_text',
+        text: accumulatedContent
+      });
+    }
+
+    // Add tool results if any
+    if (toolCalls.length > 0 && toolCalls.some(tc => tc.arguments)) {
       for (const toolCall of toolCalls) {
         if (toolCall.arguments && toolCall.name === 'get_weather') {
           let args: any = {};
@@ -184,17 +187,24 @@ export class OpenAIStreamingProvider extends StreamingProvider {
           }
           const location = args.location || 'unknown';
           const weatherResult = this.getWeather(location);
-          toolResultsText += weatherResult;
+
+          // Add tool result as output_text for conversation history
+          // For client-side history management, add as assistant message with output_text
+          assistantContentItems.push({
+            type: 'output_text',
+            text: weatherResult
+          });
         }
       }
+    }
 
-      if (toolResultsText) {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: toolResultsText
-        };
-        this.messages.push(assistantMessage);
-      }
+    // Add to conversation history if there's any content
+    if (assistantContentItems.length > 0) {
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: assistantContentItems
+      };
+      this.messages.push(assistantMessage);
     }
 
     // Debug: Log the completed stream response

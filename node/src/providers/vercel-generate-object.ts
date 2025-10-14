@@ -4,7 +4,7 @@ import { streamObject, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_STRUCTURED } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_STRUCTURED } from './constants.js';
 
 // Define schemas for different types of structured outputs
 const weatherSchema = z.object({
@@ -232,7 +232,7 @@ export class VercelGenerateObjectProvider extends BaseProvider {
           { role: 'user', content: prompt }
         ] as any,
         schema: schema,
-        maxOutputTokens: 1000,
+        maxOutputTokens: DEFAULT_MAX_TOKENS,
       };
 
       const result = await generateObject(requestParams);

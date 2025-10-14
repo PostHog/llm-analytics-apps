@@ -91,41 +91,67 @@ export class OpenAIProvider extends BaseProvider {
     this.debugApiCall("OpenAI Responses", requestParams, message);
 
     const displayParts: string[] = [];
-    let assistantContent = '';
+    const assistantContentItems: any[] = [];
+    let toolCallForHistory: any = null;
 
     if (message.output) {
       for (const outputItem of message.output) {
+        // Handle message content (text)
         if (outputItem.content) {
           for (const contentItem of outputItem.content) {
             if (contentItem.text) {
-              assistantContent += contentItem.text;
               displayParts.push(contentItem.text);
+              // Add to conversation history as output_text
+              assistantContentItems.push({
+                type: 'output_text',
+                text: contentItem.text
+              });
             }
           }
         }
 
+        // Handle tool calls (separate output items in Responses API)
         if (outputItem.name === 'get_weather') {
+          // Get the tool call details from the response
+          const callId = outputItem.call_id || `call_${outputItem.name}`;
+          const toolArguments = outputItem.arguments || '{}';
+
+          // Parse arguments to execute the tool
           let args: any = {};
-          if (outputItem.arguments) {
-            try {
-              args = JSON.parse(outputItem.arguments);
-            } catch (e) {
-              args = {};
-            }
+          try {
+            args = JSON.parse(toolArguments);
+          } catch (e) {
+            args = {};
           }
 
           const location = args.location || 'unknown';
           const weatherResult = this.getWeather(location);
           const toolResultText = this.formatToolResult('get_weather', weatherResult);
           displayParts.push(toolResultText);
+
+          // Store tool call info to add to conversation history
+          toolCallForHistory = {
+            id: callId,
+            name: outputItem.name,
+            result: weatherResult
+          };
         }
       }
     }
 
-    if (assistantContent) {
+    // Add messages to conversation history
+    // For client-side history management, add tool results as assistant messages with output_text
+    if (toolCallForHistory) {
+      assistantContentItems.push({
+        type: 'output_text',
+        text: toolCallForHistory.result
+      });
+    }
+
+    if (assistantContentItems.length > 0) {
       const assistantMessage: Message = {
         role: 'assistant',
-        content: assistantContent
+        content: assistantContentItems
       };
       this.messages.push(assistantMessage);
     }
