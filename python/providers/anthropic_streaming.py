@@ -4,6 +4,11 @@ from posthog import Posthog
 from .base import StreamingProvider
 from typing import Generator, Optional
 import json
+from .constants import (
+    ANTHROPIC_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID
+)
 
 class AnthropicStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
@@ -61,10 +66,9 @@ class AnthropicStreamingProvider(StreamingProvider):
 
         # Prepare API request parameters
         request_params = {
-            "model": "claude-3-5-sonnet-20241022",
-            "max_tokens": 200,
-            "temperature": 0.7,
-            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "model": ANTHROPIC_MODEL,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "tools": self.tools,
             "messages": self.messages,
             "stream": True

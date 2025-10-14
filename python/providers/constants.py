@@ -18,7 +18,7 @@ ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
 GEMINI_MODEL = "gemini-2.5-flash"
 
 # Default API Parameters
-DEFAULT_MAX_TOKENS = 200
+DEFAULT_MAX_TOKENS = 1000
 
 # PostHog Configuration
 DEFAULT_POSTHOG_DISTINCT_ID = "user-hog"

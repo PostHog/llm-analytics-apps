@@ -8,6 +8,7 @@ from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,
     OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
     DEFAULT_POSTHOG_DISTINCT_ID,
     SYSTEM_PROMPT_FRIENDLY
 )
@@ -86,7 +87,7 @@ class OpenAIStreamingProvider(StreamingProvider):
         # Prepare API request parameters
         request_params = {
             "model": model_name,
-            "max_output_tokens": 200,
+            "max_output_tokens": DEFAULT_MAX_TOKENS,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "input": self.messages,
             "instructions": SYSTEM_PROMPT_FRIENDLY,
@@ -123,6 +124,7 @@ class OpenAIStreamingProvider(StreamingProvider):
                             if output_index >= len(tool_calls):
                                 tool_calls.append({
                                     "name": getattr(chunk.item, 'name', 'get_weather'),
+                                    "call_id": getattr(chunk.item, 'call_id', f"call_{getattr(chunk.item, 'name', 'unknown')}"),
                                     "arguments": ""
                                 })
                     
@@ -169,31 +171,41 @@ class OpenAIStreamingProvider(StreamingProvider):
             yield f"\n\nError during streaming: {str(e)}"
         
         # Save assistant message with accumulated content or tool results
+        # Use proper Responses API format with content arrays
+        assistant_content_items = []
+
+        # Add text content if any
         if accumulated_content:
-            assistant_message = {
-                "role": "assistant",
-                "content": accumulated_content
-            }
-            self.messages.append(assistant_message)
-        elif tool_calls and any(tc.get("arguments") for tc in tool_calls):
-            # If there was a tool call but no text content, save the tool result as assistant message
-            tool_results_text = ""
+            assistant_content_items.append({
+                "type": "output_text",
+                "text": accumulated_content
+            })
+
+        # Add tool results if any
+        if tool_calls and any(tc.get("arguments") for tc in tool_calls):
             for tool_call in tool_calls:
                 if tool_call.get("arguments") and tool_call.get("name") == "get_weather":
                     try:
                         args = json.loads(tool_call["arguments"])
                         location = args.get("location", "unknown")
                         weather_result = self.get_weather(location)
-                        tool_results_text += weather_result
+
+                        # Add tool result as output_text for conversation history
+                        # For client-side history management, add as assistant message with output_text
+                        assistant_content_items.append({
+                            "type": "output_text",
+                            "text": weather_result
+                        })
                     except json.JSONDecodeError:
                         pass
 
-            if tool_results_text:
-                assistant_message = {
-                    "role": "assistant",
-                    "content": tool_results_text
-                }
-                self.messages.append(assistant_message)
+        # Add to conversation history if there's any content
+        if assistant_content_items:
+            assistant_message = {
+                "role": "assistant",
+                "content": assistant_content_items
+            }
+            self.messages.append(assistant_message)
 
         # Debug: Log the completed stream response
         if self.debug_mode:

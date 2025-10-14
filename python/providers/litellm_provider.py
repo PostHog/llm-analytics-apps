@@ -8,6 +8,7 @@ from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,
     OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
     DEFAULT_POSTHOG_DISTINCT_ID,
     SYSTEM_PROMPT_FRIENDLY
 )
@@ -125,8 +126,7 @@ class LiteLLMProvider(BaseProvider):
                 "messages": self.messages,
                 "tools": self.tools,
                 "tool_choice": "auto",
-                "max_tokens": 500,
-                "temperature": 0.7,
+                "max_tokens": DEFAULT_MAX_TOKENS,
                 "metadata": {
                     "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
                     "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
@@ -181,8 +181,7 @@ class LiteLLMProvider(BaseProvider):
                     final_request_params = {
                         "model": model_to_use,
                         "messages": self.messages,
-                        "max_tokens": 200,
-                        "temperature": 0.7,
+                        "max_tokens": DEFAULT_MAX_TOKENS,
                         "metadata": {
                             "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
                             "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
