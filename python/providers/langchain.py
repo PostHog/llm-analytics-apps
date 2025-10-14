@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, SystemMessage
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASSISTANT
 
 class LangChainProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -18,7 +19,7 @@ class LangChainProvider(BaseProvider):
         
         # Store conversation history in LangChain's native format
         self.langchain_messages = [
-            SystemMessage(content="You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+            SystemMessage(content=SYSTEM_PROMPT_ASSISTANT)
         ]
         
         self._setup_chain()
@@ -45,7 +46,7 @@ class LangChainProvider(BaseProvider):
         self.tool_map = {tool.name: tool for tool in self.langchain_tools}
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful assistant. You have access to tools that you can use to help answer questions."),
+            ("system", SYSTEM_PROMPT_ASSISTANT),
             ("user", "{input}")
         ])
         
@@ -61,7 +62,7 @@ class LangChainProvider(BaseProvider):
     def reset_conversation(self):
         """Reset the conversation history"""
         self.langchain_messages = [
-            SystemMessage(content="You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+            SystemMessage(content=SYSTEM_PROMPT_ASSISTANT)
         ]
         self.messages = []
     
@@ -88,15 +89,21 @@ class LangChainProvider(BaseProvider):
         
         # Use the model directly with conversation history instead of the chain
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
         model = ChatOpenAI(openai_api_key=self.OPENAI_API_KEY, temperature=0, model_name=model_name)
         model_with_tools = model.bind_tools(self.langchain_tools)
-        
-        response = model_with_tools.invoke(
-            self.langchain_messages,
-            config={"callbacks": [self.callback_handler]}
-        )
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "input": self.langchain_messages,
+            "config": {"callbacks": [self.callback_handler]}
+        }
+
+        response = model_with_tools.invoke(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("LangChain (OpenAI)", request_params, response)
+
         # Collect display parts
         display_parts = []
         

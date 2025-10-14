@@ -24,9 +24,16 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
+// Show debug mode status if enabled
+if (process.env.DEBUG === '1') {
+  console.log("\n" + "=".repeat(80));
+  console.log("🐛 DEBUG MODE ENABLED");
+  console.log("=".repeat(80) + "\n");
+}
+
 const posthog = new PostHog(
   process.env.POSTHOG_API_KEY!,
-  { 
+  {
     host: process.env.POSTHOG_HOST || 'https://app.posthog.com',
     flushAt: 1,  // Flush after every event
     flushInterval: 0  // Don't wait for interval, flush immediately

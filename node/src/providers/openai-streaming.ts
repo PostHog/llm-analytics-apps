@@ -1,6 +1,7 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class OpenAIStreamingProvider extends StreamingProvider {
   private client: any;
@@ -16,21 +17,18 @@ export class OpenAIStreamingProvider extends StreamingProvider {
   protected getToolDefinitions(): Tool[] {
     return [
       {
-        name: 'get_weather',
         type: 'function',
-        function: {
-          name: 'get_weather',
-          description: 'Get the current weather for a specific location',
-          parameters: {
-            type: 'object',
-            properties: {
-              location: {
-                type: 'string',
-                description: 'The city or location name to get weather for'
-              }
-            },
-            required: ['location']
-          }
+        name: 'get_weather',
+        description: 'Get the current weather for a specific location',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: {
+              type: 'string',
+              description: 'The city or location name to get weather for'
+            }
+          },
+          required: ['location']
         }
       }
     ];
@@ -40,11 +38,11 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     return 'OpenAI Responses Streaming';
   }
 
-  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+  async embed(text: string, model: string = OPENAI_EMBEDDING_MODEL): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model: model,
       input: text,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog'
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID
     });
 
     if (response.data && response.data.length > 0) {
@@ -83,16 +81,21 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     
     this.messages.push(userMessage);
 
-    const stream = await this.client.responses.create({
-      model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
-      max_output_tokens: 200,
-      temperature: 0.7,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+    const requestParams = {
+      model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
+      max_output_tokens: DEFAULT_MAX_TOKENS,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       input: this.messages,
-      instructions: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.',
+      instructions: SYSTEM_PROMPT_FRIENDLY,
       tools: this.tools,
       stream: true
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("OpenAI Responses Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.responses.create(requestParams);
 
     let accumulatedContent = '';
     const finalOutput: any[] = [];
@@ -162,15 +165,18 @@ export class OpenAIStreamingProvider extends StreamingProvider {
     }
 
     // Save assistant message with accumulated content or tool results
+    const assistantContentItems: any[] = [];
+
+    // Add text content if any
     if (accumulatedContent) {
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: accumulatedContent
-      };
-      this.messages.push(assistantMessage);
-    } else if (toolCalls.length > 0 && toolCalls.some(tc => tc.arguments)) {
-      // If there was a tool call but no text content, save the tool result as assistant message
-      let toolResultsText = '';
+      assistantContentItems.push({
+        type: 'output_text',
+        text: accumulatedContent
+      });
+    }
+
+    // Add tool results if any
+    if (toolCalls.length > 0 && toolCalls.some(tc => tc.arguments)) {
       for (const toolCall of toolCalls) {
         if (toolCall.arguments && toolCall.name === 'get_weather') {
           let args: any = {};
@@ -181,17 +187,33 @@ export class OpenAIStreamingProvider extends StreamingProvider {
           }
           const location = args.location || 'unknown';
           const weatherResult = this.getWeather(location);
-          toolResultsText += weatherResult;
+
+          // Add tool result as output_text for conversation history
+          // For client-side history management, add as assistant message with output_text
+          assistantContentItems.push({
+            type: 'output_text',
+            text: weatherResult
+          });
         }
       }
-      
-      if (toolResultsText) {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: toolResultsText
-        };
-        this.messages.push(assistantMessage);
-      }
+    }
+
+    // Add to conversation history if there's any content
+    if (assistantContentItems.length > 0) {
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: assistantContentItems
+      };
+      this.messages.push(assistantMessage);
+    }
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("OpenAI Responses Streaming API Response (completed)", {
+        accumulatedContent: accumulatedContent,
+        toolCalls: toolCalls,
+        finalOutput: finalOutput
+      });
     }
   }
 

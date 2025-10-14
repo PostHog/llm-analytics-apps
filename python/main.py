@@ -22,6 +22,12 @@ from providers.litellm_provider import LiteLLMProvider
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
+# Show debug mode status if enabled
+if os.getenv('DEBUG') == '1':
+    print("\n" + "=" * 80)
+    print("🐛 DEBUG MODE ENABLED")
+    print("=" * 80 + "\n")
+
 # Initialize PostHog client (shared across all providers)
 posthog = Posthog(
     os.getenv("POSTHOG_API_KEY"),

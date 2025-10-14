@@ -1,6 +1,7 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { BaseProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class OpenAIProvider extends BaseProvider {
   private client: any;
@@ -16,21 +17,18 @@ export class OpenAIProvider extends BaseProvider {
   protected getToolDefinitions(): Tool[] {
     return [
       {
-        name: 'get_weather',
         type: 'function',
-        function: {
-          name: 'get_weather',
-          description: 'Get the current weather for a specific location',
-          parameters: {
-            type: 'object',
-            properties: {
-              location: {
-                type: 'string',
-                description: 'The city or location name to get weather for'
-              }
-            },
-            required: ['location']
-          }
+        name: 'get_weather',
+        description: 'Get the current weather for a specific location',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: {
+              type: 'string',
+              description: 'The city or location name to get weather for'
+            }
+          },
+          required: ['location']
         }
       }
     ];
@@ -40,11 +38,11 @@ export class OpenAIProvider extends BaseProvider {
     return 'OpenAI Responses';
   }
 
-  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+  async embed(text: string, model: string = OPENAI_EMBEDDING_MODEL): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model: model,
       input: text,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog'
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID
     });
 
     if (response.data && response.data.length > 0) {
@@ -80,52 +78,80 @@ export class OpenAIProvider extends BaseProvider {
     
     this.messages.push(userMessage);
 
-    const message = await this.client.responses.create({
-      model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
-      max_output_tokens: 200,
-      temperature: 0.7,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+    const requestParams = {
+      model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
+      max_output_tokens: DEFAULT_MAX_TOKENS,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       input: this.messages,
-      instructions: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.',
+      instructions: SYSTEM_PROMPT_FRIENDLY,
       tools: this.tools
-    });
+    };
+
+    const message = await this.client.responses.create(requestParams);
+    this.debugApiCall("OpenAI Responses", requestParams, message);
 
     const displayParts: string[] = [];
-    let assistantContent = '';
+    const assistantContentItems: any[] = [];
+    let toolCallForHistory: any = null;
 
     if (message.output) {
       for (const outputItem of message.output) {
+        // Handle message content (text)
         if (outputItem.content) {
           for (const contentItem of outputItem.content) {
             if (contentItem.text) {
-              assistantContent += contentItem.text;
               displayParts.push(contentItem.text);
+              // Add to conversation history as output_text
+              assistantContentItems.push({
+                type: 'output_text',
+                text: contentItem.text
+              });
             }
           }
         }
 
+        // Handle tool calls (separate output items in Responses API)
         if (outputItem.name === 'get_weather') {
+          // Get the tool call details from the response
+          const callId = outputItem.call_id || `call_${outputItem.name}`;
+          const toolArguments = outputItem.arguments || '{}';
+
+          // Parse arguments to execute the tool
           let args: any = {};
-          if (outputItem.arguments) {
-            try {
-              args = JSON.parse(outputItem.arguments);
-            } catch (e) {
-              args = {};
-            }
+          try {
+            args = JSON.parse(toolArguments);
+          } catch (e) {
+            args = {};
           }
 
           const location = args.location || 'unknown';
           const weatherResult = this.getWeather(location);
           const toolResultText = this.formatToolResult('get_weather', weatherResult);
           displayParts.push(toolResultText);
+
+          // Store tool call info to add to conversation history
+          toolCallForHistory = {
+            id: callId,
+            name: outputItem.name,
+            result: weatherResult
+          };
         }
       }
     }
 
-    if (assistantContent) {
+    // Add messages to conversation history
+    // For client-side history management, add tool results as assistant messages with output_text
+    if (toolCallForHistory) {
+      assistantContentItems.push({
+        type: 'output_text',
+        text: toolCallForHistory.result
+      });
+    }
+
+    if (assistantContentItems.length > 0) {
       const assistantMessage: Message = {
         role: 'assistant',
-        content: assistantContent
+        content: assistantContentItems
       };
       this.messages.push(assistantMessage);
     }

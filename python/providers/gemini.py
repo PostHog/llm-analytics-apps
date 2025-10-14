@@ -3,6 +3,7 @@ from posthog.ai.gemini import Client
 from posthog import Posthog
 from google.genai import types
 from .base import BaseProvider
+from .constants import GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID
 
 class GeminiProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -72,14 +73,20 @@ class GeminiProvider(BaseProvider):
             "role": "user",
             "parts": parts
         })
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": GEMINI_MODEL,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            "contents": self.history,
+            "config": self.config
+        }
+
         # Send all messages in conversation history
-        message = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            contents=self.history,
-            config=self.config
-        )
+        message = self.client.models.generate_content(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("Google Gemini", request_params, message)
 
         # Collect response parts for display
         display_parts = []

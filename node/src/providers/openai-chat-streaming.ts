@@ -1,6 +1,7 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class OpenAIChatStreamingProvider extends StreamingProvider {
   private client: any;
@@ -18,7 +19,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     return [
       {
         role: 'system',
-        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+        content: SYSTEM_PROMPT_FRIENDLY
       }
     ];
   }
@@ -49,7 +50,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     return 'OpenAI Chat Completions Streaming';
   }
 
-  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+  async embed(text: string, model: string = OPENAI_EMBEDDING_MODEL): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model: model,
       input: text
@@ -90,11 +91,10 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     };
     this.messages.push(userMessage);
 
-    const stream = await this.client.chat.completions.create({
-      model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',
-      max_tokens: 200,
-      temperature: 0.7,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+    const requestParams = {
+      model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       messages: this.messages,
       tools: this.tools,
       tool_choice: 'auto',
@@ -102,7 +102,13 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
       stream_options: {
         include_usage: true
       }
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("OpenAI Chat Completions Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.chat.completions.create(requestParams);
 
     let accumulatedContent = '';
     const toolCalls: any[] = [];
@@ -182,6 +188,14 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     }
 
     this.messages.push(assistantMessage);
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("OpenAI Chat Completions Streaming API Response (completed)", {
+        accumulatedContent: accumulatedContent,
+        toolCalls: toolCalls
+      });
+    }
 
     // Add tool results to messages if any tools were called
     for (const toolCall of toolCalls) {

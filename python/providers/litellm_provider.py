@@ -4,6 +4,14 @@ import logging
 import litellm
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
+)
 
 class LiteLLMProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -20,7 +28,7 @@ class LiteLLMProvider(BaseProvider):
             logging.getLogger(__name__).warning(f"PostHog setup failed: {e}, continuing without PostHog")
         
         super().__init__(posthog_client)
-        self.model = "gpt-4o-mini"  # Default model
+        self.model = OPENAI_CHAT_MODEL  # Default model
     
     def get_tool_definitions(self):
         """Return tool definitions in OpenAI format (LiteLLM uses OpenAI schema)"""
@@ -56,11 +64,11 @@ class LiteLLMProvider(BaseProvider):
         return [
             {
                 "role": "system",
-                "content": "You are a friendly AI assistant. You have access to a weather tool if users ask about weather."
+                "content": SYSTEM_PROMPT_FRIENDLY
             }
         ]
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings using LiteLLM"""
         try:
             response = litellm.embedding(
@@ -95,7 +103,7 @@ class LiteLLMProvider(BaseProvider):
                 }
             ]
             # Use vision model for images
-            model_to_use = "gpt-4o"
+            model_to_use = OPENAI_VISION_MODEL
         else:
             user_content = user_input
             model_to_use = self.model
@@ -112,20 +120,25 @@ class LiteLLMProvider(BaseProvider):
         self.messages.append(user_message)
         
         try:
-            # Send all messages in conversation history
-            response = litellm.completion(
-                model=model_to_use,
-                messages=self.messages,
-                tools=self.tools,
-                tool_choice="auto",
-                max_tokens=500,
-                temperature=0.7,
-                metadata={
-                    "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-                    "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            # Prepare API request parameters
+            request_params = {
+                "model": model_to_use,
+                "messages": self.messages,
+                "tools": self.tools,
+                "tool_choice": "auto",
+                "max_tokens": DEFAULT_MAX_TOKENS,
+                "metadata": {
+                    "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                    "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
                 }
-            )
-            
+            }
+
+            # Send all messages in conversation history
+            response = litellm.completion(**request_params)
+
+            # Debug: Log the API call (request + response)
+            self._debug_api_call(f"LiteLLM ({self.model})", request_params, response)
+
             # Extract the assistant's response
             assistant_message = response.choices[0].message
             
@@ -164,17 +177,22 @@ class LiteLLMProvider(BaseProvider):
                 
                 # Get final response after tool execution
                 try:
-                    final_response = litellm.completion(
-                        model=model_to_use,
-                        messages=self.messages,
-                        max_tokens=200,
-                        temperature=0.7,
-                        metadata={
+                    # Prepare API request parameters for final response
+                    final_request_params = {
+                        "model": model_to_use,
+                        "messages": self.messages,
+                        "max_tokens": DEFAULT_MAX_TOKENS,
+                        "metadata": {
                             "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-                            "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+                            "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
                         }
-                    )
-                    
+                    }
+
+                    final_response = litellm.completion(**final_request_params)
+
+                    # Debug: Log the API call (request + response)
+                    self._debug_api_call(f"LiteLLM ({self.model})", final_request_params, final_response)
+
                     final_content = final_response.choices[0].message.content
                     if final_content:
                         display_parts.append(final_content)

@@ -4,6 +4,14 @@ from posthog.ai.openai import OpenAI
 from posthog import Posthog
 from .base import StreamingProvider
 from typing import Generator, Optional
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
+)
 
 class OpenAIStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
@@ -14,24 +22,21 @@ class OpenAIStreamingProvider(StreamingProvider):
         )
     
     def get_tool_definitions(self):
-        """Return tool definitions in OpenAI format"""
+        """Return tool definitions in OpenAI Responses API format"""
         return [
             {
-                "name": "get_weather",
                 "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get the current weather for a specific location",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "location": {
-                                "type": "string",
-                                "description": "The city or location name to get weather for"
-                            }
-                        },
-                        "required": ["location"]
-                    }
+                "name": "get_weather",
+                "description": "Get the current weather for a specific location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city or location name to get weather for"
+                        }
+                    },
+                    "required": ["location"]
                 }
             }
         ]
@@ -39,7 +44,7 @@ class OpenAIStreamingProvider(StreamingProvider):
     def get_name(self):
         return "OpenAI Responses Streaming"
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings for the given text"""
         response = self.client.embeddings.create(
             model=model,
@@ -77,20 +82,26 @@ class OpenAIStreamingProvider(StreamingProvider):
         self.messages.append(user_message)
         
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_output_tokens": DEFAULT_MAX_TOKENS,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            "input": self.messages,
+            "instructions": SYSTEM_PROMPT_FRIENDLY,
+            "tools": self.tools,
+            "stream": True
+        }
+
+        # Debug: Log the API request
+        if self.debug_mode:
+            self._debug_log("OpenAI Responses Streaming API Request", request_params)
+
         # Create streaming response
-        stream = self.client.responses.create(
-            model=model_name,
-            max_output_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            input=self.messages,
-            instructions="You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
-            tools=self.tools,
-            stream=True
-        )
-        
+        stream = self.client.responses.create(**request_params)
+
         accumulated_content = ""
         final_output = []
         tool_calls = []
@@ -113,6 +124,7 @@ class OpenAIStreamingProvider(StreamingProvider):
                             if output_index >= len(tool_calls):
                                 tool_calls.append({
                                     "name": getattr(chunk.item, 'name', 'get_weather'),
+                                    "call_id": getattr(chunk.item, 'call_id', f"call_{getattr(chunk.item, 'name', 'unknown')}"),
                                     "arguments": ""
                                 })
                     
@@ -159,31 +171,49 @@ class OpenAIStreamingProvider(StreamingProvider):
             yield f"\n\nError during streaming: {str(e)}"
         
         # Save assistant message with accumulated content or tool results
+        # Use proper Responses API format with content arrays
+        assistant_content_items = []
+
+        # Add text content if any
         if accumulated_content:
-            assistant_message = {
-                "role": "assistant",
-                "content": accumulated_content
-            }
-            self.messages.append(assistant_message)
-        elif tool_calls and any(tc.get("arguments") for tc in tool_calls):
-            # If there was a tool call but no text content, save the tool result as assistant message
-            tool_results_text = ""
+            assistant_content_items.append({
+                "type": "output_text",
+                "text": accumulated_content
+            })
+
+        # Add tool results if any
+        if tool_calls and any(tc.get("arguments") for tc in tool_calls):
             for tool_call in tool_calls:
                 if tool_call.get("arguments") and tool_call.get("name") == "get_weather":
                     try:
                         args = json.loads(tool_call["arguments"])
                         location = args.get("location", "unknown")
                         weather_result = self.get_weather(location)
-                        tool_results_text += weather_result
+
+                        # Add tool result as output_text for conversation history
+                        # For client-side history management, add as assistant message with output_text
+                        assistant_content_items.append({
+                            "type": "output_text",
+                            "text": weather_result
+                        })
                     except json.JSONDecodeError:
                         pass
-            
-            if tool_results_text:
-                assistant_message = {
-                    "role": "assistant",
-                    "content": tool_results_text
-                }
-                self.messages.append(assistant_message)
+
+        # Add to conversation history if there's any content
+        if assistant_content_items:
+            assistant_message = {
+                "role": "assistant",
+                "content": assistant_content_items
+            }
+            self.messages.append(assistant_message)
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("OpenAI Responses Streaming API Response (completed)", {
+                "accumulated_content": accumulated_content,
+                "tool_calls": tool_calls,
+                "final_output": final_output
+            })
     
     def chat(self, user_input: str, base64_image: Optional[str] = None) -> str:
         """Non-streaming chat for compatibility"""

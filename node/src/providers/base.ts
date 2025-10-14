@@ -1,4 +1,8 @@
 import { PostHog } from "posthog-node";
+import {
+  WEATHER_TEMP_MIN_CELSIUS,
+  WEATHER_TEMP_MAX_CELSIUS,
+} from "./constants.js";
 
 export interface Message {
   role: string;
@@ -10,6 +14,7 @@ export interface Tool {
   name?: string;
   type?: string;
   description?: string;
+  parameters?: any;
   input_schema?: any;
   function?: {
     name: string;
@@ -22,9 +27,11 @@ export abstract class BaseProvider {
   protected posthogClient: PostHog;
   protected messages: Message[] = [];
   protected tools: Tool[] = [];
+  protected debugMode: boolean;
 
   constructor(posthogClient: PostHog) {
     this.posthogClient = posthogClient;
+    this.debugMode = process.env.DEBUG === '1';
     this.initializeTools();
   }
 
@@ -48,7 +55,11 @@ export abstract class BaseProvider {
   }
 
   protected getWeather(location: string): string {
-    return `The current weather in ${location} is 22°C (72°F) with partly cloudy skies and light winds.`;
+    // Generate random temperature using configured range
+    const range = WEATHER_TEMP_MAX_CELSIUS - WEATHER_TEMP_MIN_CELSIUS + 1;
+    const tempCelsius = Math.floor(Math.random() * range) + WEATHER_TEMP_MIN_CELSIUS;
+    const tempFahrenheit = Math.floor(tempCelsius * 9/5 + 32);
+    return `The current weather in ${location} is ${tempCelsius}°C (${tempFahrenheit}°F) with partly cloudy skies and light winds.`;
   }
 
   protected formatToolResult(toolName: string, result: string): string {
@@ -57,6 +68,86 @@ export abstract class BaseProvider {
     }
 
     return result;
+  }
+
+  protected debugLog(title: string, data: any, truncate: boolean = true): void {
+    if (!this.debugMode) {
+      return;
+    }
+
+    console.log("\n" + "=".repeat(80));
+    console.log(`🐛 DEBUG: ${title}`);
+    console.log("=".repeat(80));
+
+    let output: string;
+    if (typeof data === "object") {
+      output = JSON.stringify(data, null, 2);
+    } else {
+      output = String(data);
+    }
+
+    // Truncate very long outputs
+    if (truncate && output.length > 5000) {
+      output = output.substring(0, 5000) + "\n... (truncated)";
+    }
+
+    console.log(output);
+    console.log("=".repeat(80) + "\n");
+  }
+
+  protected debugApiCall(
+    providerName: string,
+    requestData: any,
+    responseData?: any,
+  ): void {
+    /**
+     * Simplified debug logging for API calls.
+     * Just pass the request and optionally response objects - they'll be converted to JSON automatically.
+     *
+     * Usage:
+     *   // Log request only (before API call)
+     *   this.debugApiCall("Anthropic", requestParams);
+     *
+     *   // Log both request and response (after API call)
+     *   this.debugApiCall("Anthropic", requestParams, response);
+     */
+    if (!this.debugMode) {
+      return;
+    }
+
+    // Convert objects to plain objects for JSON serialization
+    const toPlainObject = (obj: any): any => {
+      if (obj === null || obj === undefined) {
+        return obj;
+      }
+      if (typeof obj !== "object") {
+        return obj;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(toPlainObject);
+      }
+      // Try to convert to plain object
+      if (obj.toJSON) {
+        return obj.toJSON();
+      }
+      // For regular objects, recursively convert
+      const result: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          result[key] = toPlainObject(obj[key]);
+        }
+      }
+      return result;
+    };
+
+    this.debugLog(`${providerName} API Request`, toPlainObject(requestData));
+
+    if (responseData !== undefined) {
+      this.debugLog(
+        `${providerName} API Response`,
+        toPlainObject(responseData),
+      );
+    }
   }
 }
 

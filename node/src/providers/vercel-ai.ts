@@ -4,6 +4,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIProvider extends BaseProvider {
   private openaiClient: any;
@@ -20,7 +21,7 @@ export class VercelAIProvider extends BaseProvider {
     return [
       {
         role: 'system',
-        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+        content: SYSTEM_PROMPT_FRIENDLY
       }
     ];
   }
@@ -60,29 +61,31 @@ export class VercelAIProvider extends BaseProvider {
 
     try {
       // Use vision model for images, regular model otherwise
-      const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+      const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
       const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
-        posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+        posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
         posthogPrivacyMode: false
       });
-      
-      const { text, toolResults } = await generateText({
+
+      const requestParams = {
         model: model,
         messages: this.messages as any,
-        maxOutputTokens: 200,
-        temperature: 0.7,
+        maxOutputTokens: DEFAULT_MAX_TOKENS,
         tools: {
           get_weather: {
             description: 'Get the current weather for a specific location',
             inputSchema: z.object({
               location: z.string().describe('The city or location name to get weather for')
             }),
-            execute: async ({ location }) => {
+            execute: async ({ location }: { location: string }) => {
               return this.getWeather(location);
             }
           }
         }
-      });
+      };
+
+      const { text, toolResults } = await generateText(requestParams);
+      this.debugApiCall("Vercel AI SDK (OpenAI)", requestParams, { text, toolResults });
 
       if (text) {
         displayParts.push(text);

@@ -3,6 +3,14 @@ import json
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
+)
 
 class OpenAIChatProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -18,7 +26,7 @@ class OpenAIChatProvider(BaseProvider):
         return [
             {
                 "role": "system",
-                "content": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather."
+                "content": SYSTEM_PROMPT_FRIENDLY
             }
         ]
     
@@ -48,7 +56,7 @@ class OpenAIChatProvider(BaseProvider):
         return "OpenAI Chat Completions"
     
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings for the given text"""
         response = self.client.embeddings.create(
             model=model,
@@ -89,17 +97,23 @@ class OpenAIChatProvider(BaseProvider):
         
         # Send all messages in conversation history using PostHog wrapper
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        response = self.client.chat.completions.create(
-            model=model_name,
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            messages=self.messages,
-            tools=self.tools,
-            tool_choice="auto"
-        )
-        
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            "messages": self.messages,
+            "tools": self.tools,
+            "tool_choice": "auto"
+        }
+
+        response = self.client.chat.completions.create(**request_params)
+
+        # Debug: Log the API call (request + response)
+        self._debug_api_call("OpenAI Chat Completions", request_params, response)
+
         # Collect response parts for display
         display_parts = []
         assistant_content = ""

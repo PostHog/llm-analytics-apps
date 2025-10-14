@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { PostHog } from 'posthog-node';
 import { BaseProvider, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASSISTANT } from './constants.js';
 
 export class LangChainProvider extends BaseProvider {
   private callbackHandler: any;
@@ -20,7 +21,7 @@ export class LangChainProvider extends BaseProvider {
     });
 
     this.langchainMessages = [
-      new SystemMessage("You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+      new SystemMessage(SYSTEM_PROMPT_ASSISTANT)
     ];
 
     this.setupChain();
@@ -47,7 +48,7 @@ export class LangChainProvider extends BaseProvider {
     this.toolMap.set('get_weather', getWeatherTool);
 
     const prompt = ChatPromptTemplate.fromMessages([
-      ['system', 'You are a helpful assistant. You have access to tools that you can use to help answer questions.'],
+      ['system', SYSTEM_PROMPT_ASSISTANT],
       ['user', '{input}']
     ]);
 
@@ -65,7 +66,7 @@ export class LangChainProvider extends BaseProvider {
 
   resetConversation(): void {
     this.langchainMessages = [
-      new SystemMessage("You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+      new SystemMessage(SYSTEM_PROMPT_ASSISTANT)
     ];
     this.messages = [];
   }
@@ -95,17 +96,23 @@ export class LangChainProvider extends BaseProvider {
     
     this.langchainMessages.push(userMessage);
 
-    const model = new ChatOpenAI({ 
-      openAIApiKey: process.env.OPENAI_API_KEY, 
+    const model = new ChatOpenAI({
+      openAIApiKey: process.env.OPENAI_API_KEY,
       temperature: 0,
-      modelName: base64Image ? 'gpt-4o' : 'gpt-4o-mini'  // Use vision model for images
+      modelName: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL
     });
     const modelWithTools = model.bindTools(this.langchainTools);
+
+    const requestParams = {
+      messages: this.langchainMessages,
+      callbacks: [this.callbackHandler]
+    };
 
     const response = await modelWithTools.invoke(
       this.langchainMessages,
       { callbacks: [this.callbackHandler] }
     );
+    this.debugApiCall("LangChain (OpenAI)", requestParams, response);
 
     const displayParts: string[] = [];
 

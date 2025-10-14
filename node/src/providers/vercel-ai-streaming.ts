@@ -4,6 +4,7 @@ import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIStreamingProvider extends StreamingProvider {
   private openaiClient: any;
@@ -20,7 +21,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
     return [
       {
         role: 'system',
-        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+        content: SYSTEM_PROMPT_FRIENDLY
       }
     ];
   }
@@ -60,30 +61,35 @@ export class VercelAIStreamingProvider extends StreamingProvider {
     this.messages.push(userMessage);
 
     // Use vision model for images, regular model otherwise
-    const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+    const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogPrivacyMode: false
     });
 
     try {
-      const result = await streamText({
+      const requestParams = {
         model: model,
         messages: this.messages as any,
-        maxOutputTokens: 200,
-        temperature: 0.7,
+        maxOutputTokens: DEFAULT_MAX_TOKENS,
         tools: {
           get_weather: {
             description: 'Get the current weather for a specific location',
             inputSchema: z.object({
               location: z.string().describe('The city or location name to get weather for')
             }),
-            execute: async ({ location }) => {
+            execute: async ({ location }: { location: string }) => {
               return this.getWeather(location);
             }
           }
         }
-      });
+      };
+
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK Streaming (OpenAI) API Request", requestParams);
+      }
+
+      const result = await streamText(requestParams);
 
       let accumulatedContent = '';
       const toolCalls: any[] = [];
@@ -142,7 +148,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             toolResultsText += this.formatToolResult('get_weather', weatherResult);
           }
         }
-        
+
         if (toolResultsText) {
           const assistantMessage: Message = {
             role: 'assistant',
@@ -150,6 +156,14 @@ export class VercelAIStreamingProvider extends StreamingProvider {
           };
           this.messages.push(assistantMessage);
         }
+      }
+
+      // Debug: Log the completed stream response
+      if (this.debugMode) {
+        this.debugLog("Vercel AI SDK Streaming (OpenAI) API Response (completed)", {
+          accumulatedContent: accumulatedContent,
+          toolCalls: toolCalls
+        });
       }
     } catch (error: any) {
       console.error('Error in Vercel AI streaming chat:', error);

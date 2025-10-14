@@ -4,6 +4,14 @@ from posthog.ai.openai import OpenAI
 from posthog import Posthog
 from .base import StreamingProvider
 from typing import Generator, Optional
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
+)
 
 class OpenAIChatStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
@@ -19,7 +27,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
         return [
             {
                 "role": "system",
-                "content": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather."
+                "content": SYSTEM_PROMPT_FRIENDLY
             }
         ]
     
@@ -48,7 +56,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
     def get_name(self):
         return "OpenAI Chat Completions Streaming"
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings for the given text"""
         response = self.client.embeddings.create(
             model=model,
@@ -88,23 +96,29 @@ class OpenAIChatStreamingProvider(StreamingProvider):
         self.messages.append(user_message)
         
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        
-        # Create streaming response
-        stream = self.client.chat.completions.create(
-            model=model_name,
-            max_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            messages=self.messages,
-            tools=self.tools,
-            tool_choice="auto",
-            stream=True,
-            stream_options={
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
+
+        # Prepare API request parameters
+        request_params = {
+            "model": model_name,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            "messages": self.messages,
+            "tools": self.tools,
+            "tool_choice": "auto",
+            "stream": True,
+            "stream_options": {
                 "include_usage": True
             }
-        )
-        
+        }
+
+        # Debug: Log the API request
+        if self.debug_mode:
+            self._debug_log("OpenAI Chat Completions Streaming API Request", request_params)
+
+        # Create streaming response
+        stream = self.client.chat.completions.create(**request_params)
+
         accumulated_content = ""
         tool_calls = []
         tool_calls_by_index = {}
@@ -182,7 +196,14 @@ class OpenAIChatStreamingProvider(StreamingProvider):
             assistant_message["tool_calls"] = tool_calls
         
         self.messages.append(assistant_message)
-        
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("OpenAI Chat Completions Streaming API Response (completed)", {
+                "accumulated_content": accumulated_content,
+                "tool_calls": tool_calls
+            })
+
         # Add tool results to messages if any tools were called
         for tool_call in tool_calls:
             if tool_call["function"]["name"] == "get_weather":
@@ -190,7 +211,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                     args = json.loads(tool_call["function"]["arguments"])
                     location = args.get("location", "unknown")
                     weather_result = self.get_weather(location)
-                    
+
                     tool_result_message = {
                         "role": "tool",
                         "tool_call_id": tool_call["id"],

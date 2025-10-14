@@ -1,6 +1,7 @@
 import { GoogleGenAI as PostHogGoogleGenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Tool } from './base.js';
+import { GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
 
 export class GeminiStreamingProvider extends StreamingProvider {
   private client: any;
@@ -81,12 +82,18 @@ export class GeminiStreamingProvider extends StreamingProvider {
     });
 
     // Create the streaming response
-    const stream = await this.client.models.generateContentStream({
-      model: 'gemini-2.5-flash',
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+    const requestParams = {
+      model: GEMINI_MODEL,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       contents: this.history,
       config: this.config
-    });
+    };
+
+    if (this.debugMode) {
+      this.debugLog("Google Gemini Streaming API Request", requestParams);
+    }
+
+    const stream = await this.client.models.generateContentStream(requestParams);
 
     let accumulatedText = "";
     const modelParts: any[] = [];
@@ -139,7 +146,16 @@ export class GeminiStreamingProvider extends StreamingProvider {
         parts: modelParts
       });
     }
-    
+
+    // Debug: Log the completed stream response
+    if (this.debugMode) {
+      this.debugLog("Google Gemini Streaming API Response (completed)", {
+        accumulatedText: accumulatedText,
+        modelParts: modelParts,
+        toolResults: toolResults
+      });
+    }
+
     // Add tool results to history if any
     for (const toolResult of toolResults) {
       this.history.push({

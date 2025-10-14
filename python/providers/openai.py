@@ -3,6 +3,14 @@ import json
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
+)
 
 class OpenAIProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -13,24 +21,21 @@ class OpenAIProvider(BaseProvider):
         )
     
     def get_tool_definitions(self):
-        """Return tool definitions in OpenAI format"""
+        """Return tool definitions in OpenAI Responses API format"""
         return [
             {
-                "name": "get_weather",
                 "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get the current weather for a specific location",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "location": {
-                                "type": "string",
-                                "description": "The city or location name to get weather for"
-                            }
-                        },
-                        "required": ["location"]
-                    }
+                "name": "get_weather",
+                "description": "Get the current weather for a specific location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city or location name to get weather for"
+                        }
+                    },
+                    "required": ["location"]
                 }
             }
         ]
@@ -39,7 +44,7 @@ class OpenAIProvider(BaseProvider):
         return "OpenAI Responses"
     
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings for the given text"""
         response = self.client.embeddings.create(
             model=model,
@@ -75,55 +80,82 @@ class OpenAIProvider(BaseProvider):
             "content": user_content
         }
         self.messages.append(user_message)
-        
+
         # Send all messages in conversation history
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
-        message = self.client.responses.create(
-            model=model_name,
-            max_output_tokens=200,
-            temperature=0.7,
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            input=self.messages,
-            instructions="You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
-            tools=self.tools
-        )
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
+        request_params = {
+            "model": model_name,
+            "max_output_tokens": DEFAULT_MAX_TOKENS,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            "input": self.messages,
+            "instructions": SYSTEM_PROMPT_FRIENDLY,
+            "tools": self.tools
+        }
+
+        message = self.client.responses.create(**request_params)
+
+        # Debug: Log the API call
+        self._debug_api_call("OpenAI", request_params, message)
         
         # Collect response parts for display
         display_parts = []
-        assistant_content = ""
-        
-        # Extract text from the complex response structure
+        assistant_content_items = []
+
+        # Extract text and tool calls from the response structure
         if hasattr(message, 'output') and message.output:
             for output_item in message.output:
+                # Handle message content (text)
                 if hasattr(output_item, 'content') and output_item.content:
                     # Extract text from content array
                     for content_item in output_item.content:
                         if hasattr(content_item, 'text') and content_item.text:
-                            assistant_content += content_item.text
                             display_parts.append(content_item.text)
-                
-                # Check for tool calls (these would be separate output items)
+                            # Add to conversation history as output_text
+                            assistant_content_items.append({
+                                "type": "output_text",
+                                "text": content_item.text
+                            })
+
+                # Handle tool calls (separate output items in Responses API)
                 if hasattr(output_item, 'name') and output_item.name == "get_weather":
-                    # Try to get arguments from the tool call
+                    # Get the tool call details from the response
+                    call_id = getattr(output_item, 'call_id', f"call_{output_item.name}")
+                    tool_arguments = getattr(output_item, 'arguments', '{}')
+
+                    # Parse arguments to execute the tool
                     arguments = {}
-                    if hasattr(output_item, 'arguments') and output_item.arguments:
-                        try:
-                            arguments = json.loads(output_item.arguments)
-                        except json.JSONDecodeError:
-                            arguments = {}
-                    
+                    try:
+                        arguments = json.loads(tool_arguments)
+                    except json.JSONDecodeError:
+                        arguments = {}
+
                     location = arguments.get("location", "unknown")
                     weather_result = self.get_weather(location)
                     tool_result_text = self.format_tool_result("get_weather", weather_result)
                     display_parts.append(tool_result_text)
-        
-        # Add assistant's response to conversation history with proper string content
-        if assistant_content:
+
+                    # Store tool call info to add to conversation history
+                    tool_call_for_history = {
+                        "id": call_id,
+                        "name": output_item.name,
+                        "result": weather_result
+                    }
+
+        # Add messages to conversation history
+        # For client-side history management (not using previous_response_id),
+        # we add tool results as assistant messages with output_text
+        if 'tool_call_for_history' in locals():
+            assistant_content_items.append({
+                "type": "output_text",
+                "text": tool_call_for_history["result"]
+            })
+
+        if assistant_content_items:
             assistant_message = {
                 "role": "assistant",
-                "content": assistant_content
+                "content": assistant_content_items
             }
             self.messages.append(assistant_message)
-        
+
         return "\n\n".join(display_parts) if display_parts else "No response received"

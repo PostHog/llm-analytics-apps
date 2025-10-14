@@ -73,15 +73,22 @@ class GeminiStreamingProvider(StreamingProvider):
             "role": "user",
             "parts": parts
         })
-        
+
+        # Prepare API request parameters
+        request_params = {
+            "model": "gemini-2.5-flash",
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "contents": self.history,
+            "config": self.config
+        }
+
+        # Debug: Log the API request
+        if self.debug_mode:
+            self._debug_log("Google Gemini Streaming API Request", request_params)
+
         # Create streaming response
-        stream = self.client.models.generate_content_stream(
-            model="gemini-2.5-flash",
-            posthog_distinct_id=os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-            contents=self.history,
-            config=self.config
-        )
-        
+        stream = self.client.models.generate_content_stream(**request_params)
+
         accumulated_text = ""
         model_parts = []
         tool_results = []
@@ -128,7 +135,15 @@ class GeminiStreamingProvider(StreamingProvider):
                 "role": "model",
                 "parts": model_parts
             })
-        
+
+        # Debug: Log the completed stream response
+        if self.debug_mode:
+            self._debug_log("Google Gemini Streaming API Response (completed)", {
+                "accumulated_text": accumulated_text,
+                "model_parts": model_parts,
+                "tool_results": tool_results
+            })
+
         # Add tool results to history if any
         for tool_result in tool_results:
             self.history.append({

@@ -4,6 +4,7 @@ import { streamObject, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_STRUCTURED } from './constants.js';
 
 // Define schemas for different types of structured outputs
 const weatherSchema = z.object({
@@ -63,7 +64,7 @@ export class VercelGenerateObjectProvider extends BaseProvider {
     return [
       {
         role: 'system',
-        content: 'You are an AI assistant that provides structured responses. You can provide weather information, create user profiles, or generate task plans based on user requests.'
+        content: SYSTEM_PROMPT_STRUCTURED
       }
     ];
   }
@@ -208,9 +209,9 @@ export class VercelGenerateObjectProvider extends BaseProvider {
     this.messages.push(userMessage);
 
     const { schema, type } = this.determineSchema(userInput);
-    const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+    const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogPrivacyMode: false
     });
 
@@ -224,16 +225,18 @@ export class VercelGenerateObjectProvider extends BaseProvider {
         prompt = `Create a detailed task plan based on: "${userInput}". Break it down into specific, actionable steps.`;
       }
 
-      const result = await generateObject({
+      const requestParams = {
         model: model,
         messages: [
           ...this.messages.slice(0, -1), // All previous messages except the last user message
           { role: 'user', content: prompt }
         ] as any,
         schema: schema,
-        maxOutputTokens: 1000,
-        temperature: 0.7,
-      });
+        maxOutputTokens: DEFAULT_MAX_TOKENS,
+      };
+
+      const result = await generateObject(requestParams);
+      this.debugApiCall("Vercel AI SDK - generateObject (OpenAI)", requestParams, result);
 
       const formatted = this.formatStructuredData(result.object, type);
       

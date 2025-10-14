@@ -21,7 +21,7 @@ if [ -f "../.env" ]; then
     echo -e "${BLUE}📋 Loading environment variables from .env...${NC}"
     set -a
     source ../.env
-    set +a 
+    set +a
 fi
 
 
