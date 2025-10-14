@@ -2,6 +2,12 @@ import os
 from posthog.ai.anthropic import Anthropic
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import (
+    ANTHROPIC_MODEL,
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_POSTHOG_DISTINCT_ID
+)
 
 class AnthropicProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -60,10 +66,10 @@ class AnthropicProvider(BaseProvider):
 
         # Prepare API request parameters
         request_params = {
-            "model": "claude-3-5-sonnet-20241022",
-            "max_tokens": 200,
-            "temperature": 0.7,
-            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "model": ANTHROPIC_MODEL,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "temperature": DEFAULT_TEMPERATURE,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "tools": self.tools,
             "messages": self.messages
         }

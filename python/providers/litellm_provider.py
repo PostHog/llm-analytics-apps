@@ -4,6 +4,12 @@ import logging
 import litellm
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_POSTHOG_DISTINCT_ID
+)
 
 class LiteLLMProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -20,7 +26,7 @@ class LiteLLMProvider(BaseProvider):
             logging.getLogger(__name__).warning(f"PostHog setup failed: {e}, continuing without PostHog")
         
         super().__init__(posthog_client)
-        self.model = "gpt-4o-mini"  # Default model
+        self.model = OPENAI_CHAT_MODEL  # Default model
     
     def get_tool_definitions(self):
         """Return tool definitions in OpenAI format (LiteLLM uses OpenAI schema)"""
@@ -60,7 +66,7 @@ class LiteLLMProvider(BaseProvider):
             }
         ]
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings using LiteLLM"""
         try:
             response = litellm.embedding(
@@ -95,7 +101,7 @@ class LiteLLMProvider(BaseProvider):
                 }
             ]
             # Use vision model for images
-            model_to_use = "gpt-4o"
+            model_to_use = OPENAI_VISION_MODEL
         else:
             user_content = user_input
             model_to_use = self.model
@@ -121,8 +127,8 @@ class LiteLLMProvider(BaseProvider):
                 "max_tokens": 500,
                 "temperature": 0.7,
                 "metadata": {
-                    "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-                    "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+                    "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                    "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
                 }
             }
 
@@ -178,7 +184,7 @@ class LiteLLMProvider(BaseProvider):
                         "temperature": 0.7,
                         "metadata": {
                             "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-                            "user_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+                            "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
                         }
                     }
 

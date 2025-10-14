@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, SystemMessage
 from posthog import Posthog
 from .base import BaseProvider
+from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL
 
 class LangChainProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -88,7 +89,7 @@ class LangChainProvider(BaseProvider):
         
         # Use the model directly with conversation history instead of the chain
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
         model = ChatOpenAI(openai_api_key=self.OPENAI_API_KEY, temperature=0, model_name=model_name)
         model_with_tools = model.bind_tools(self.langchain_tools)
 

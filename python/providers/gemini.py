@@ -3,6 +3,7 @@ from posthog.ai.gemini import Client
 from posthog import Posthog
 from google.genai import types
 from .base import BaseProvider
+from .constants import GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID
 
 class GeminiProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -75,8 +76,8 @@ class GeminiProvider(BaseProvider):
 
         # Prepare API request parameters
         request_params = {
-            "model": "gemini-2.5-flash",
-            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "model": GEMINI_MODEL,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "contents": self.history,
             "config": self.config
         }

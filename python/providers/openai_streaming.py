@@ -4,6 +4,13 @@ from posthog.ai.openai import OpenAI
 from posthog import Posthog
 from .base import StreamingProvider
 from typing import Generator, Optional
+from .constants import (
+    OPENAI_CHAT_MODEL,
+    OPENAI_VISION_MODEL,
+    OPENAI_EMBEDDING_MODEL,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_POSTHOG_DISTINCT_ID
+)
 
 class OpenAIStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
@@ -39,7 +46,7 @@ class OpenAIStreamingProvider(StreamingProvider):
     def get_name(self):
         return "OpenAI Responses Streaming"
     
-    def embed(self, text: str, model: str = "text-embedding-3-small") -> list:
+    def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings for the given text"""
         response = self.client.embeddings.create(
             model=model,
@@ -77,14 +84,14 @@ class OpenAIStreamingProvider(StreamingProvider):
         self.messages.append(user_message)
         
         # Use vision model for images
-        model_name = "gpt-4o" if base64_image else "gpt-4o-mini"
+        model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
 
         # Prepare API request parameters
         request_params = {
             "model": model_name,
             "max_output_tokens": 200,
-            "temperature": 0.7,
-            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+            "temperature": DEFAULT_TEMPERATURE,
+            "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "input": self.messages,
             "instructions": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
             "tools": self.tools,
