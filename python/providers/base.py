@@ -3,6 +3,8 @@ from typing import List, Dict, Any, Optional, Generator
 from posthog import Posthog
 import os
 import json
+import random
+from .constants import WEATHER_TEMP_MIN_CELSIUS, WEATHER_TEMP_MAX_CELSIUS
 
 class BaseProvider(ABC):
     """Base class for all AI providers"""
@@ -43,7 +45,10 @@ class BaseProvider(ABC):
         
     def get_weather(self, location: str) -> str:
         """Mock weather function - returns fake weather data"""
-        return f"The current weather in {location} is 22°C (72°F) with partly cloudy skies and light winds."
+        # Generate random temperature using configured range
+        temp_celsius = random.randint(WEATHER_TEMP_MIN_CELSIUS, WEATHER_TEMP_MAX_CELSIUS)
+        temp_fahrenheit = int(temp_celsius * 9/5 + 32)
+        return f"The current weather in {location} is {temp_celsius}°C ({temp_fahrenheit}°F) with partly cloudy skies and light winds."
         
     def format_tool_result(self, tool_name: str, result: str) -> str:
         """Format tool result for display"""

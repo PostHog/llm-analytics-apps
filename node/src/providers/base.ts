@@ -1,4 +1,8 @@
 import { PostHog } from "posthog-node";
+import {
+  WEATHER_TEMP_MIN_CELSIUS,
+  WEATHER_TEMP_MAX_CELSIUS,
+} from "./constants.js";
 
 export interface Message {
   role: string;
@@ -50,7 +54,11 @@ export abstract class BaseProvider {
   }
 
   protected getWeather(location: string): string {
-    return `The current weather in ${location} is 22°C (72°F) with partly cloudy skies and light winds.`;
+    // Generate random temperature using configured range
+    const range = WEATHER_TEMP_MAX_CELSIUS - WEATHER_TEMP_MIN_CELSIUS + 1;
+    const tempCelsius = Math.floor(Math.random() * range) + WEATHER_TEMP_MIN_CELSIUS;
+    const tempFahrenheit = Math.floor(tempCelsius * 9/5 + 32);
+    return `The current weather in ${location} is ${tempCelsius}°C (${tempFahrenheit}°F) with partly cloudy skies and light winds.`;
   }
 
   protected formatToolResult(toolName: string, result: string): string {
