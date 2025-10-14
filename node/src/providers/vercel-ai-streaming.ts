@@ -4,7 +4,7 @@ import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIStreamingProvider extends StreamingProvider {
   private openaiClient: any;
@@ -72,7 +72,6 @@ export class VercelAIStreamingProvider extends StreamingProvider {
         model: model,
         messages: this.messages as any,
         maxOutputTokens: DEFAULT_MAX_TOKENS,
-        temperature: DEFAULT_TEMPERATURE,
         tools: {
           get_weather: {
             description: 'Get the current weather for a specific location',

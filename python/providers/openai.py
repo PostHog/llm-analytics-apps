@@ -7,7 +7,6 @@ from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,
     OPENAI_EMBEDDING_MODEL,
-    DEFAULT_TEMPERATURE,
     DEFAULT_POSTHOG_DISTINCT_ID,
     SYSTEM_PROMPT_FRIENDLY
 )
@@ -90,7 +89,6 @@ class OpenAIProvider(BaseProvider):
         request_params = {
             "model": model_name,
             "max_output_tokens": 200,
-            "temperature": DEFAULT_TEMPERATURE,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "input": self.messages,
             "instructions": SYSTEM_PROMPT_FRIENDLY,

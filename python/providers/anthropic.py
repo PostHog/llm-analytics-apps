@@ -5,7 +5,6 @@ from .base import BaseProvider
 from .constants import (
     ANTHROPIC_MODEL,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_TEMPERATURE,
     DEFAULT_POSTHOG_DISTINCT_ID
 )
 
@@ -68,7 +67,6 @@ class AnthropicProvider(BaseProvider):
         request_params = {
             "model": ANTHROPIC_MODEL,
             "max_tokens": DEFAULT_MAX_TOKENS,
-            "temperature": DEFAULT_TEMPERATURE,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "tools": self.tools,
             "messages": self.messages

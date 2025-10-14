@@ -6,7 +6,6 @@ import {
   OPENAI_VISION_MODEL,
   OPENAI_EMBEDDING_MODEL,
   DEFAULT_MAX_TOKENS,
-  DEFAULT_TEMPERATURE,
   DEFAULT_POSTHOG_DISTINCT_ID,
   SYSTEM_PROMPT_FRIENDLY,
 } from './constants.js';
@@ -100,7 +99,6 @@ export class OpenAIChatProvider extends BaseProvider {
     const requestParams = {
       model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,  // Use vision model for images
       max_tokens: DEFAULT_MAX_TOKENS,
-      temperature: DEFAULT_TEMPERATURE,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       messages: this.messages,
       tools: this.tools,

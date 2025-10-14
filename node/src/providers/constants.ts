@@ -7,7 +7,7 @@
  */
 
 // OpenAI Models
-export const OPENAI_CHAT_MODEL = "gpt-4o-mini";
+export const OPENAI_CHAT_MODEL = "gpt-5-mini";
 export const OPENAI_VISION_MODEL = "gpt-4o";
 export const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
 
@@ -19,7 +19,6 @@ export const GEMINI_MODEL = "gemini-2.5-flash";
 
 // Default API Parameters
 export const DEFAULT_MAX_TOKENS = 200;
-export const DEFAULT_TEMPERATURE = 0.7;
 
 // PostHog Configuration
 export const DEFAULT_POSTHOG_DISTINCT_ID = "user-hog";

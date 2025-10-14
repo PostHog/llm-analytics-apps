@@ -1,7 +1,7 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class OpenAIChatStreamingProvider extends StreamingProvider {
   private client: any;
@@ -94,7 +94,6 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
     const requestParams = {
       model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
       max_tokens: DEFAULT_MAX_TOKENS,
-      temperature: DEFAULT_TEMPERATURE,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       messages: this.messages,
       tools: this.tools,
