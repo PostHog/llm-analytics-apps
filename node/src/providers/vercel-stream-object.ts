@@ -4,7 +4,7 @@ import { streamObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_STRUCTURED } from './constants.js';
 
 // Define schemas for different types of structured outputs
 const weatherSchema = z.object({
@@ -64,7 +64,7 @@ export class VercelStreamObjectProvider extends StreamingProvider {
     return [
       {
         role: 'system',
-        content: 'You are an AI assistant that provides structured responses. You can provide weather information, create user profiles, or generate task plans based on user requests.'
+        content: SYSTEM_PROMPT_STRUCTURED
       }
     ];
   }

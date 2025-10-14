@@ -9,7 +9,8 @@ from .constants import (
     OPENAI_VISION_MODEL,
     OPENAI_EMBEDDING_MODEL,
     DEFAULT_TEMPERATURE,
-    DEFAULT_POSTHOG_DISTINCT_ID
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
 )
 
 class OpenAIStreamingProvider(StreamingProvider):
@@ -93,7 +94,7 @@ class OpenAIStreamingProvider(StreamingProvider):
             "temperature": DEFAULT_TEMPERATURE,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "input": self.messages,
-            "instructions": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.",
+            "instructions": SYSTEM_PROMPT_FRIENDLY,
             "tools": self.tools,
             "stream": True
         }

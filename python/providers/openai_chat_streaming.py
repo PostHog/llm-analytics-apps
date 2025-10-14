@@ -10,7 +10,8 @@ from .constants import (
     OPENAI_EMBEDDING_MODEL,
     DEFAULT_MAX_TOKENS,
     DEFAULT_TEMPERATURE,
-    DEFAULT_POSTHOG_DISTINCT_ID
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
 )
 
 class OpenAIChatStreamingProvider(StreamingProvider):
@@ -27,7 +28,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
         return [
             {
                 "role": "system",
-                "content": "You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather."
+                "content": SYSTEM_PROMPT_FRIENDLY
             }
         ]
     

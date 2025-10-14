@@ -1,7 +1,7 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class OpenAIStreamingProvider extends StreamingProvider {
   private client: any;
@@ -90,7 +90,7 @@ export class OpenAIStreamingProvider extends StreamingProvider {
       temperature: DEFAULT_TEMPERATURE,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       input: this.messages,
-      instructions: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.',
+      instructions: SYSTEM_PROMPT_FRIENDLY,
       tools: this.tools,
       stream: true
     };

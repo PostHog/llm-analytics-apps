@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { PostHog } from 'posthog-node';
 import { BaseProvider, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASSISTANT } from './constants.js';
 
 export class LangChainProvider extends BaseProvider {
   private callbackHandler: any;
@@ -21,7 +21,7 @@ export class LangChainProvider extends BaseProvider {
     });
 
     this.langchainMessages = [
-      new SystemMessage("You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+      new SystemMessage(SYSTEM_PROMPT_ASSISTANT)
     ];
 
     this.setupChain();
@@ -48,7 +48,7 @@ export class LangChainProvider extends BaseProvider {
     this.toolMap.set('get_weather', getWeatherTool);
 
     const prompt = ChatPromptTemplate.fromMessages([
-      ['system', 'You are a helpful assistant. You have access to tools that you can use to help answer questions.'],
+      ['system', SYSTEM_PROMPT_ASSISTANT],
       ['user', '{input}']
     ]);
 
@@ -66,7 +66,7 @@ export class LangChainProvider extends BaseProvider {
 
   resetConversation(): void {
     this.langchainMessages = [
-      new SystemMessage("You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+      new SystemMessage(SYSTEM_PROMPT_ASSISTANT)
     ];
     this.messages = [];
   }

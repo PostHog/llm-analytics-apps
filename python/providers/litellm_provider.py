@@ -8,7 +8,8 @@ from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,
     OPENAI_EMBEDDING_MODEL,
-    DEFAULT_POSTHOG_DISTINCT_ID
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    SYSTEM_PROMPT_FRIENDLY
 )
 
 class LiteLLMProvider(BaseProvider):
@@ -62,7 +63,7 @@ class LiteLLMProvider(BaseProvider):
         return [
             {
                 "role": "system",
-                "content": "You are a friendly AI assistant. You have access to a weather tool if users ask about weather."
+                "content": SYSTEM_PROMPT_FRIENDLY
             }
         ]
     

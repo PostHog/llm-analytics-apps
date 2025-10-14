@@ -6,7 +6,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, SystemMessage
 from posthog import Posthog
 from .base import BaseProvider
-from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL
+from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASSISTANT
 
 class LangChainProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
@@ -19,7 +19,7 @@ class LangChainProvider(BaseProvider):
         
         # Store conversation history in LangChain's native format
         self.langchain_messages = [
-            SystemMessage(content="You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+            SystemMessage(content=SYSTEM_PROMPT_ASSISTANT)
         ]
         
         self._setup_chain()
@@ -46,7 +46,7 @@ class LangChainProvider(BaseProvider):
         self.tool_map = {tool.name: tool for tool in self.langchain_tools}
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful assistant. You have access to tools that you can use to help answer questions."),
+            ("system", SYSTEM_PROMPT_ASSISTANT),
             ("user", "{input}")
         ])
         
@@ -62,7 +62,7 @@ class LangChainProvider(BaseProvider):
     def reset_conversation(self):
         """Reset the conversation history"""
         self.langchain_messages = [
-            SystemMessage(content="You are a helpful assistant. You have access to tools that you can use to help answer questions.")
+            SystemMessage(content=SYSTEM_PROMPT_ASSISTANT)
         ]
         self.messages = []
     

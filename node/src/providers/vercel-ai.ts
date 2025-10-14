@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIProvider extends BaseProvider {
   private openaiClient: any;
@@ -21,7 +21,7 @@ export class VercelAIProvider extends BaseProvider {
     return [
       {
         role: 'system',
-        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+        content: SYSTEM_PROMPT_FRIENDLY
       }
     ];
   }

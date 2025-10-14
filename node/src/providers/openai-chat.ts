@@ -8,6 +8,7 @@ import {
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
   DEFAULT_POSTHOG_DISTINCT_ID,
+  SYSTEM_PROMPT_FRIENDLY,
 } from './constants.js';
 
 export class OpenAIChatProvider extends BaseProvider {
@@ -26,7 +27,7 @@ export class OpenAIChatProvider extends BaseProvider {
     return [
       {
         role: 'system',
-        content: 'You are a friendly AI that just makes conversation. You have access to a weather tool if the user asks about weather.'
+        content: SYSTEM_PROMPT_FRIENDLY
       }
     ];
   }
