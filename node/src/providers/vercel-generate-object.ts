@@ -4,6 +4,7 @@ import { streamObject, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
 
 // Define schemas for different types of structured outputs
 const weatherSchema = z.object({
@@ -208,9 +209,9 @@ export class VercelGenerateObjectProvider extends BaseProvider {
     this.messages.push(userMessage);
 
     const { schema, type } = this.determineSchema(userInput);
-    const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+    const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogPrivacyMode: false
     });
 
@@ -232,7 +233,7 @@ export class VercelGenerateObjectProvider extends BaseProvider {
         ] as any,
         schema: schema,
         maxOutputTokens: 1000,
-        temperature: 0.7,
+        temperature: DEFAULT_TEMPERATURE,
       };
 
       const result = await generateObject(requestParams);

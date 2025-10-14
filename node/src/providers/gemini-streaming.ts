@@ -1,6 +1,7 @@
 import { GoogleGenAI as PostHogGoogleGenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { StreamingProvider, Tool } from './base.js';
+import { GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
 
 export class GeminiStreamingProvider extends StreamingProvider {
   private client: any;
@@ -82,8 +83,8 @@ export class GeminiStreamingProvider extends StreamingProvider {
 
     // Create the streaming response
     const requestParams = {
-      model: 'gemini-2.5-flash',
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      model: GEMINI_MODEL,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       contents: this.history,
       config: this.config
     };

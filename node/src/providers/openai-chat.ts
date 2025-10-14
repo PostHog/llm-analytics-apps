@@ -1,6 +1,14 @@
 import { OpenAI as PostHogOpenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { BaseProvider, Message, Tool } from './base.js';
+import {
+  OPENAI_CHAT_MODEL,
+  OPENAI_VISION_MODEL,
+  OPENAI_EMBEDDING_MODEL,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_POSTHOG_DISTINCT_ID,
+} from './constants.js';
 
 export class OpenAIChatProvider extends BaseProvider {
   private client: any;
@@ -49,7 +57,7 @@ export class OpenAIChatProvider extends BaseProvider {
     return 'OpenAI Chat Completions';
   }
 
-  async embed(text: string, model: string = 'text-embedding-3-small'): Promise<number[]> {
+  async embed(text: string, model: string = OPENAI_EMBEDDING_MODEL): Promise<number[]> {
     const response = await this.client.embeddings.create({
       model: model,
       input: text
@@ -89,10 +97,10 @@ export class OpenAIChatProvider extends BaseProvider {
     this.messages.push(userMessage);
 
     const requestParams = {
-      model: base64Image ? 'gpt-4o' : 'gpt-4o-mini',  // Use vision model for images
-      max_tokens: 200,
-      temperature: 0.7,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,  // Use vision model for images
+      max_tokens: DEFAULT_MAX_TOKENS,
+      temperature: DEFAULT_TEMPERATURE,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       messages: this.messages,
       tools: this.tools,
       tool_choice: 'auto'

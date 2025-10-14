@@ -1,6 +1,12 @@
 import { Anthropic as PostHogAnthropic } from "@posthog/ai";
 import { PostHog } from "posthog-node";
 import { BaseProvider, Message, Tool } from "./base.js";
+import {
+  ANTHROPIC_MODEL,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_POSTHOG_DISTINCT_ID,
+} from "./constants.js";
 
 export class AnthropicProvider extends BaseProvider {
   private client: any;
@@ -64,10 +70,10 @@ export class AnthropicProvider extends BaseProvider {
 
     // Prepare API request parameters
     const requestParams = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 200,
-      temperature: 0.7,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || "user-hog",
+      model: ANTHROPIC_MODEL,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      temperature: DEFAULT_TEMPERATURE,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       tools: this.tools,
       messages: this.messages,
     };

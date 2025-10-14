@@ -4,6 +4,7 @@ import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
 
 export class VercelAIStreamingProvider extends StreamingProvider {
   private openaiClient: any;
@@ -60,9 +61,9 @@ export class VercelAIStreamingProvider extends StreamingProvider {
     this.messages.push(userMessage);
 
     // Use vision model for images, regular model otherwise
-    const modelName = base64Image ? 'gpt-4o' : 'gpt-4o-mini';
+    const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogPrivacyMode: false
     });
 
@@ -70,8 +71,8 @@ export class VercelAIStreamingProvider extends StreamingProvider {
       const requestParams = {
         model: model,
         messages: this.messages as any,
-        maxOutputTokens: 200,
-        temperature: 0.7,
+        maxOutputTokens: DEFAULT_MAX_TOKENS,
+        temperature: DEFAULT_TEMPERATURE,
         tools: {
           get_weather: {
             description: 'Get the current weather for a specific location',

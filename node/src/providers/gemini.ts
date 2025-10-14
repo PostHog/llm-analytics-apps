@@ -1,6 +1,7 @@
 import { GoogleGenAI as PostHogGoogleGenAI } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
 import { BaseProvider, Tool } from './base.js';
+import { GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID } from './constants.js';
 
 export class GeminiProvider extends BaseProvider {
   private client: any;
@@ -78,8 +79,8 @@ export class GeminiProvider extends BaseProvider {
     });
 
     const requestParams = {
-      model: 'gemini-2.5-flash',
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || 'user-hog',
+      model: GEMINI_MODEL,
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       contents: this.history,
       config: this.config
     };
