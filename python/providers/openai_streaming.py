@@ -21,24 +21,21 @@ class OpenAIStreamingProvider(StreamingProvider):
         )
     
     def get_tool_definitions(self):
-        """Return tool definitions in OpenAI format"""
+        """Return tool definitions in OpenAI Responses API format"""
         return [
             {
-                "name": "get_weather",
                 "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get the current weather for a specific location",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "location": {
-                                "type": "string",
-                                "description": "The city or location name to get weather for"
-                            }
-                        },
-                        "required": ["location"]
-                    }
+                "name": "get_weather",
+                "description": "Get the current weather for a specific location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The city or location name to get weather for"
+                        }
+                    },
+                    "required": ["location"]
                 }
             }
         ]

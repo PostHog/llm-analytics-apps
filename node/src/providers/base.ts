@@ -14,6 +14,7 @@ export interface Tool {
   name?: string;
   type?: string;
   description?: string;
+  parameters?: any;
   input_schema?: any;
   function?: {
     name: string;
