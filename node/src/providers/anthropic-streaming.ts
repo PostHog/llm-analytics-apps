@@ -1,17 +1,27 @@
 import { Anthropic as PostHogAnthropic } from "@posthog/ai";
 import { PostHog } from "posthog-node";
 import { StreamingProvider, Message, Tool } from "./base.js";
-import { ANTHROPIC_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID } from "./constants.js";
+import { 
+  ANTHROPIC_MODEL, 
+  DEFAULT_MAX_TOKENS, 
+  DEFAULT_POSTHOG_DISTINCT_ID,
+  DEFAULT_THINKING_ENABLED,
+  DEFAULT_THINKING_BUDGET_TOKENS
+} from "./constants.js";
 
 export class AnthropicStreamingProvider extends StreamingProvider {
   private client: any;
+  private enableThinking: boolean;
+  private thinkingBudget: number;
 
-  constructor(posthogClient: PostHog) {
+  constructor(posthogClient: PostHog, enableThinking: boolean = false, thinkingBudget?: number) {
     super(posthogClient);
     this.client = new PostHogAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
       posthog: posthogClient,
     });
+    this.enableThinking = enableThinking;
+    this.thinkingBudget = thinkingBudget || DEFAULT_THINKING_BUDGET_TOKENS;
   }
 
   protected getToolDefinitions(): Tool[] {
@@ -65,14 +75,29 @@ export class AnthropicStreamingProvider extends StreamingProvider {
     };
     this.messages.push(userMessage);
 
-    const requestParams = {
+    // Prepare API request parameters
+    // Note: max_tokens must be greater than thinking.budget_tokens
+    const thinkingBudget = this.enableThinking ? Math.max(this.thinkingBudget, 1024) : 0;
+    const maxTokens = this.enableThinking 
+      ? Math.max(DEFAULT_MAX_TOKENS, thinkingBudget + 2000)
+      : DEFAULT_MAX_TOKENS;
+    
+    const requestParams: any = {
       model: ANTHROPIC_MODEL,
-      max_tokens: DEFAULT_MAX_TOKENS,
+      max_tokens: maxTokens,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       tools: this.tools,
       messages: this.messages,
       stream: true,
     };
+
+    // Add extended thinking if enabled
+    if (this.enableThinking) {
+      requestParams.thinking = {
+        type: "enabled",
+        budget_tokens: thinkingBudget,
+      };
+    }
 
     if (this.debugMode) {
       this.debugLog("Anthropic Streaming API Request", requestParams);
@@ -84,17 +109,34 @@ export class AnthropicStreamingProvider extends StreamingProvider {
     const assistantContent: any[] = [];
     const toolsUsed: any[] = [];
     let currentTextBlock: any = null;
+    let currentThinkingBlock: any = null;
 
     for await (const chunk of stream) {
       // Handle content block start events
       if (chunk.type === "content_block_start") {
-        if (chunk.content_block?.type === "text") {
+        if (chunk.content_block?.type === "thinking") {
+          // Start a new thinking content block
+          if (this.enableThinking) {
+            yield "\n\n💭 Thinking: ";
+          }
+          currentThinkingBlock = {
+            type: "thinking",
+            thinking: "",
+          };
+          assistantContent.push(currentThinkingBlock);
+          currentTextBlock = null;
+        } else if (chunk.content_block?.type === "text") {
           // Start a new text content block
+          // If we just had thinking, add some spacing
+          if (currentThinkingBlock && this.enableThinking) {
+            yield "\n\n";
+          }
           currentTextBlock = {
             type: "text",
             text: "",
           };
           assistantContent.push(currentTextBlock);
+          currentThinkingBlock = null;
         } else if (chunk.content_block?.type === "tool_use") {
           const toolInfo = {
             id: chunk.content_block.id,
@@ -110,13 +152,23 @@ export class AnthropicStreamingProvider extends StreamingProvider {
             name: toolInfo.name,
             input: toolInfo.input, // Will be updated later
           });
-          currentTextBlock = null; // Not a text block
+          currentTextBlock = null;
+          currentThinkingBlock = null;
         }
       }
 
-      // Handle text delta events
+      // Handle delta events (text, thinking, tool input)
       if ("delta" in chunk) {
-        if ("text" in chunk.delta) {
+        if ("thinking" in chunk.delta) {
+          const thinkingDelta = chunk.delta.thinking ?? "";
+          if (currentThinkingBlock) {
+            currentThinkingBlock.thinking += thinkingDelta;
+          }
+          // Only yield thinking if enabled
+          if (this.enableThinking) {
+            yield thinkingDelta;
+          }
+        } else if ("text" in chunk.delta) {
           const delta = chunk.delta.text ?? "";
           accumulatedContent += delta;
           yield delta;
@@ -143,6 +195,7 @@ export class AnthropicStreamingProvider extends StreamingProvider {
 
       if (chunk.type === "content_block_stop") {
         currentTextBlock = null; // Reset current text block
+        currentThinkingBlock = null; // Reset current thinking block
         
         if (toolsUsed.length > 0) {
           const lastTool = toolsUsed[toolsUsed.length - 1];

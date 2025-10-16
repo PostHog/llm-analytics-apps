@@ -7,16 +7,20 @@ import json
 from .constants import (
     ANTHROPIC_MODEL,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_POSTHOG_DISTINCT_ID
+    DEFAULT_POSTHOG_DISTINCT_ID,
+    DEFAULT_THINKING_ENABLED,
+    DEFAULT_THINKING_BUDGET_TOKENS
 )
 
 class AnthropicStreamingProvider(StreamingProvider):
-    def __init__(self, posthog_client: Posthog):
+    def __init__(self, posthog_client: Posthog, enable_thinking: bool = False, thinking_budget: int = None):
         super().__init__(posthog_client)
         self.client = Anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             posthog_client=posthog_client
         )
+        self.enable_thinking = enable_thinking
+        self.thinking_budget = thinking_budget or DEFAULT_THINKING_BUDGET_TOKENS
     
     def get_tool_definitions(self):
         """Return tool definitions in Anthropic format"""
@@ -65,14 +69,25 @@ class AnthropicStreamingProvider(StreamingProvider):
         self.messages.append(user_message)
 
         # Prepare API request parameters
+        # Note: max_tokens must be greater than thinking.budget_tokens
+        thinking_budget = max(self.thinking_budget, 1024) if self.enable_thinking else 0
+        max_tokens = max(DEFAULT_MAX_TOKENS, thinking_budget + 2000) if self.enable_thinking else DEFAULT_MAX_TOKENS
+        
         request_params = {
             "model": ANTHROPIC_MODEL,
-            "max_tokens": DEFAULT_MAX_TOKENS,
+            "max_tokens": max_tokens,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "tools": self.tools,
             "messages": self.messages,
             "stream": True
         }
+        
+        # Add extended thinking if enabled
+        if self.enable_thinking:
+            request_params["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": thinking_budget
+            }
 
         # Debug: Log the API request (no response for streaming)
         if self.debug_mode:
@@ -86,6 +101,7 @@ class AnthropicStreamingProvider(StreamingProvider):
         assistant_content = []
         tools_used = []
         current_text_block = None
+        current_thinking_block = None
         
         # Process the stream events
         try:
@@ -97,9 +113,17 @@ class AnthropicStreamingProvider(StreamingProvider):
                 if not hasattr(event, 'type'):
                     continue
                     
-                # Handle text delta events
+                # Handle delta events (text, thinking, tool input)
                 if event.type == "content_block_delta":
-                    if hasattr(event, 'delta') and hasattr(event.delta, 'text'):
+                    if hasattr(event, 'delta') and hasattr(event.delta, 'thinking'):
+                        # Handle thinking content delta
+                        thinking_text = event.delta.thinking
+                        if current_thinking_block is not None:
+                            current_thinking_block["thinking"] += thinking_text
+                        # Only yield thinking if enabled
+                        if self.enable_thinking:
+                            yield thinking_text
+                    elif hasattr(event, 'delta') and hasattr(event.delta, 'text'):
                         text = event.delta.text
                         accumulated_content += text
                         yield text
@@ -120,13 +144,27 @@ class AnthropicStreamingProvider(StreamingProvider):
                         content_block = event.content_block
                         
                         if hasattr(content_block, 'type'):
-                            if content_block.type == "text":
+                            if content_block.type == "thinking":
+                                # Start a new thinking content block
+                                if self.enable_thinking:
+                                    yield "\n\n💭 Thinking: "
+                                current_thinking_block = {
+                                    "type": "thinking",
+                                    "thinking": ""
+                                }
+                                assistant_content.append(current_thinking_block)
+                                current_text_block = None
+                            elif content_block.type == "text":
                                 # Start a new text content block
+                                # If we just had thinking, add some spacing
+                                if current_thinking_block is not None and self.enable_thinking:
+                                    yield "\n\n"
                                 current_text_block = {
                                     "type": "text",
                                     "text": ""
                                 }
                                 assistant_content.append(current_text_block)
+                                current_thinking_block = None
                             elif content_block.type == "tool_use":
                                 tool_info = {
                                     "id": content_block.id if hasattr(content_block, 'id') else None,
@@ -142,11 +180,13 @@ class AnthropicStreamingProvider(StreamingProvider):
                                     "name": tool_info["name"],
                                     "input": tool_info["input"]  # Will be updated later
                                 })
-                                current_text_block = None  # Not a text block
+                                current_text_block = None
+                                current_thinking_block = None
                 
-                # Handle content block stop (finalize tool or text)
+                # Handle content block stop (finalize tool, text, or thinking)
                 elif event.type == "content_block_stop":
                     current_text_block = None  # Reset current text block
+                    current_thinking_block = None  # Reset current thinking block
                     if tools_used and tools_used[-1].get("input_string"):
                         last_tool = tools_used[-1]
                         try:

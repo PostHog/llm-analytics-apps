@@ -53,6 +53,46 @@ The `run.sh` script will automatically:
 - **Image Test**: Tests image description capabilities
 - **Embeddings Test**: Tests embedding generation (OpenAI only)
 
+### 🧠 Extended Thinking (Anthropic Claude)
+
+Claude's extended thinking feature allows the model to show its internal reasoning process before responding. This can improve response quality for complex problems.
+
+**How to use:**
+
+When you select an Anthropic provider (options 1 or 2), you'll be prompted:
+
+```
+🧠 Extended Thinking Configuration
+==================================================
+Extended thinking shows Claude's reasoning process.
+This can improve response quality for complex problems.
+==================================================
+
+Enable extended thinking? (y/n) [default: n]: y
+Thinking budget tokens (1024-32000) [default: 10000]: 15000
+
+✅ Initialized Anthropic (Thinking: enabled, budget: 15000)
+```
+
+**How it works:**
+- The CLI will ask if you want to enable thinking each time you select an Anthropic provider
+- You can customize the thinking budget (min: 1024, recommended: 10000-15000)
+- Claude will show its reasoning process prefixed with "💭 Thinking:"
+- Larger budgets can improve response quality for complex problems
+- The model may not use the entire allocated budget
+- Works with both regular and streaming Anthropic providers
+- `max_tokens` is automatically adjusted to accommodate both thinking and response
+
+**Example output:**
+```
+👤 You: Are there an infinite number of prime numbers such that n mod 4 == 3?
+
+💭 Thinking: Let me think about this systematically. I need to consider 
+the distribution of primes and their properties modulo 4...
+
+🤖 Bot: Yes, there are infinitely many prime numbers of the form 4k + 3...
+```
+
 ### 🎯 LLM Trace Generator
 An interactive tool for creating complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder for creating arbitrarily complex structures.
 

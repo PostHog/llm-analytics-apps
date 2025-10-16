@@ -12,13 +12,19 @@ OPENAI_VISION_MODEL = "gpt-4o"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 
 # Anthropic Models
-ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
+ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929"
 
 # Google Gemini Models
 GEMINI_MODEL = "gemini-2.5-flash"
 
 # Default API Parameters
 DEFAULT_MAX_TOKENS = 1000
+
+# Extended Thinking Configuration (Anthropic)
+# Set ENABLE_THINKING=1 in .env to enable extended thinking
+# Set THINKING_BUDGET_TOKENS in .env to customize (default: 10000, min: 1024)
+DEFAULT_THINKING_ENABLED = False
+DEFAULT_THINKING_BUDGET_TOKENS = 10000
 
 # PostHog Configuration
 DEFAULT_POSTHOG_DISTINCT_ID = "user-hog"
