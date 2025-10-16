@@ -150,12 +150,43 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
             print("\n\n👋 Goodbye!")
             exit(0)
 
-def create_provider(choice):
+def prompt_thinking_config():
+    """Ask user if they want extended thinking enabled for Anthropic"""
+    print("\n🧠 Extended Thinking Configuration")
+    print("=" * 50)
+    print("Extended thinking shows Claude's reasoning process.")
+    print("This can improve response quality for complex problems.")
+    print("=" * 50)
+    
+    while True:
+        try:
+            choice = input("\nEnable extended thinking? (y/n) [default: n]: ").strip().lower()
+            if choice in ["y", "yes"]:
+                # Ask for budget (optional)
+                budget_input = input("Thinking budget tokens (1024-32000) [default: 10000]: ").strip()
+                if budget_input:
+                    try:
+                        budget = int(budget_input)
+                        budget = max(1024, min(budget, 32000))  # Clamp between 1024 and 32000
+                        return True, budget
+                    except ValueError:
+                        print("⚠️  Invalid number, using default (10000)")
+                        return True, 10000
+                return True, 10000
+            elif choice in ["n", "no", ""]:
+                return False, None
+            else:
+                print("❌ Please enter 'y' or 'n'")
+        except KeyboardInterrupt:
+            print("\n\n👋 Goodbye!")
+            exit(0)
+
+def create_provider(choice, enable_thinking=False, thinking_budget=None):
     """Create the selected provider instance"""
     if choice == "1":
-        return AnthropicProvider(posthog)
+        return AnthropicProvider(posthog, enable_thinking, thinking_budget)
     elif choice == "2":
-        return AnthropicStreamingProvider(posthog)
+        return AnthropicStreamingProvider(posthog, enable_thinking, thinking_budget)
     elif choice == "3":
         return GeminiProvider(posthog)
     elif choice == "4":
@@ -376,7 +407,8 @@ def run_all_tests(mode):
         print(f"[{provider_id}/10] Testing {provider_name}...")
         
         try:
-            provider = create_provider(provider_id)
+            # For automated tests, don't enable thinking by default
+            provider = create_provider(provider_id, False, None)
             
             # Run the appropriate test
             if mode == "2":
@@ -456,10 +488,19 @@ def main():
             run_all_tests(mode)
             continue
         
+        # Check if Anthropic provider selected and prompt for thinking config
+        enable_thinking = False
+        thinking_budget = None
+        if choice in ["1", "2"]:  # Anthropic providers
+            enable_thinking, thinking_budget = prompt_thinking_config()
+        
         # Create provider instance
         try:
-            provider = create_provider(choice)
-            print(f"\n✅ Initialized {provider.get_name()}")
+            provider = create_provider(choice, enable_thinking, thinking_budget)
+            status_msg = f"\n✅ Initialized {provider.get_name()}"
+            if enable_thinking:
+                status_msg += f" (Thinking: enabled, budget: {thinking_budget})"
+            print(status_msg)
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
             continue

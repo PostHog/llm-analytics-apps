@@ -183,12 +183,44 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
   });
 }
 
-function createProvider(choice: string): any {
+async function promptThinkingConfig(): Promise<{ enableThinking: boolean; thinkingBudget?: number }> {
+  console.log('\n🧠 Extended Thinking Configuration');
+  console.log('='.repeat(50));
+  console.log('Extended thinking shows Claude\'s reasoning process.');
+  console.log('This can improve response quality for complex problems.');
+  console.log('='.repeat(50));
+
+  return new Promise((resolve) => {
+    rl.question('\nEnable extended thinking? (y/n) [default: n]: ', (choice) => {
+      choice = choice.trim().toLowerCase();
+      if (choice === 'y' || choice === 'yes') {
+        rl.question('Thinking budget tokens (1024-32000) [default: 10000]: ', (budgetInput) => {
+          budgetInput = budgetInput.trim();
+          if (budgetInput) {
+            const budget = Math.max(1024, Math.min(parseInt(budgetInput) || 10000, 32000));
+            if (isNaN(budget)) {
+              console.log('⚠️  Invalid number, using default (10000)');
+              resolve({ enableThinking: true, thinkingBudget: 10000 });
+            } else {
+              resolve({ enableThinking: true, thinkingBudget: budget });
+            }
+          } else {
+            resolve({ enableThinking: true, thinkingBudget: 10000 });
+          }
+        });
+      } else {
+        resolve({ enableThinking: false });
+      }
+    });
+  });
+}
+
+function createProvider(choice: string, enableThinking: boolean = false, thinkingBudget?: number): any {
   switch (choice) {
     case '1':
-      return new AnthropicProvider(posthog);
+      return new AnthropicProvider(posthog, enableThinking, thinkingBudget);
     case '2':
-      return new AnthropicStreamingProvider(posthog);
+      return new AnthropicStreamingProvider(posthog, enableThinking, thinkingBudget);
     case '3':
       return new GeminiProvider(posthog);
     case '4':
@@ -481,7 +513,8 @@ async function runAllTests(mode: string): Promise<void> {
     console.log(`[${providerId}/8] Testing ${providerName}...`);
     
     try {
-      const provider = createProvider(providerId);
+      // For automated tests, don't enable thinking by default
+      const provider = createProvider(providerId, false, undefined);
       
       // Run the appropriate test
       const result = mode === '2' 
@@ -568,11 +601,24 @@ async function main(): Promise<void> {
       continue;
     }
     
+    // Check if Anthropic provider selected and prompt for thinking config
+    let enableThinking = false;
+    let thinkingBudget: number | undefined = undefined;
+    if (choice === '1' || choice === '2') {  // Anthropic providers
+      const config = await promptThinkingConfig();
+      enableThinking = config.enableThinking;
+      thinkingBudget = config.thinkingBudget;
+    }
+    
     // Create provider instance
     let provider;
     try {
-      provider = createProvider(choice);
-      console.log(`\n✅ Initialized ${provider.getName()}`);
+      provider = createProvider(choice, enableThinking, thinkingBudget);
+      let statusMsg = `\n✅ Initialized ${provider.getName()}`;
+      if (enableThinking) {
+        statusMsg += ` (Thinking: enabled, budget: ${thinkingBudget})`;
+      }
+      console.log(statusMsg);
     } catch (error: any) {
       console.log(`❌ Failed to initialize provider: ${error.message}`);
       continue;
