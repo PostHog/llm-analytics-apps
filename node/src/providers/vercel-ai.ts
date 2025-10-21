@@ -64,7 +64,10 @@ export class VercelAIProvider extends BaseProvider {
       const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
       const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
         posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-        posthogPrivacyMode: false
+        posthogPrivacyMode: false,
+        posthogProperties: {
+          $ai_span_name: "vercel_ai_generate_text",
+        },
       });
 
       const requestParams = {
@@ -75,10 +78,12 @@ export class VercelAIProvider extends BaseProvider {
           get_weather: {
             description: 'Get the current weather for a specific location',
             inputSchema: z.object({
-              location: z.string().describe('The city or location name to get weather for')
+              latitude: z.number().describe('The latitude of the location (e.g., 37.7749 for San Francisco)'),
+              longitude: z.number().describe('The longitude of the location (e.g., -122.4194 for San Francisco)'),
+              location_name: z.string().describe('A human-readable name for the location (e.g., \'San Francisco, CA\' or \'Dublin, Ireland\')')
             }),
-            execute: async ({ location }: { location: string }) => {
-              return this.getWeather(location);
+            execute: async ({ latitude, longitude, location_name }: { latitude: number; longitude: number; location_name: string }) => {
+              return this.getWeather(latitude, longitude, location_name);
             }
           }
         }

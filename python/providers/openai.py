@@ -15,6 +15,10 @@ from .constants import (
 class OpenAIProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "openai_responses"}
+
         self.client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             posthog_client=posthog_client
@@ -26,16 +30,24 @@ class OpenAIProvider(BaseProvider):
             {
                 "type": "function",
                 "name": "get_weather",
-                "description": "Get the current weather for a specific location",
+                "description": "Get the current weather for a specific location using geographical coordinates",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "location": {
+                        "latitude": {
+                            "type": "number",
+                            "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
+                        },
+                        "longitude": {
+                            "type": "number",
+                            "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
+                        },
+                        "location_name": {
                             "type": "string",
-                            "description": "The city or location name to get weather for"
+                            "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
                         }
                     },
-                    "required": ["location"]
+                    "required": ["latitude", "longitude", "location_name"]
                 }
             }
         ]
@@ -130,8 +142,10 @@ class OpenAIProvider(BaseProvider):
                     except json.JSONDecodeError:
                         arguments = {}
 
-                    location = arguments.get("location", "unknown")
-                    weather_result = self.get_weather(location)
+                    latitude = arguments.get("latitude", 0.0)
+                    longitude = arguments.get("longitude", 0.0)
+                    location_name = arguments.get("location_name")
+                    weather_result = self.get_weather(latitude, longitude, location_name)
                     tool_result_text = self.format_tool_result("get_weather", weather_result)
                     display_parts.append(tool_result_text)
 
