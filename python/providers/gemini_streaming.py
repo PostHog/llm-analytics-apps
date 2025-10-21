@@ -8,6 +8,10 @@ from typing import Generator, Optional
 class GeminiStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "gemini_generate_content_streaming"}
+
         self.client = Client(
             api_key=os.getenv("GEMINI_API_KEY"),
             # vertexai=True,
@@ -31,16 +35,24 @@ class GeminiStreamingProvider(StreamingProvider):
         return [
             {
                 "name": "get_current_weather",
-                "description": "Gets the current weather for a given location.",
+                "description": "Gets the current weather for a given location using geographical coordinates.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "location": {
+                        "latitude": {
+                            "type": "number",
+                            "description": "The latitude of the location (e.g., 37.7749 for San Francisco)",
+                        },
+                        "longitude": {
+                            "type": "number",
+                            "description": "The longitude of the location (e.g., -122.4194 for San Francisco)",
+                        },
+                        "location_name": {
                             "type": "string",
-                            "description": "The city name, e.g. San Francisco",
+                            "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')",
                         },
                     },
-                    "required": ["location"],
+                    "required": ["latitude", "longitude", "location_name"],
                 },
             }
         ]
@@ -111,8 +123,10 @@ class GeminiStreamingProvider(StreamingProvider):
                                     function_call = part.function_call
                                     
                                     if function_call.name == "get_current_weather":
-                                        location = function_call.args.get("location", "unknown")
-                                        weather_result = self.get_weather(location)
+                                        latitude = function_call.args.get("latitude", 0.0)
+                                        longitude = function_call.args.get("longitude", 0.0)
+                                        location_name = function_call.args.get("location_name")
+                                        weather_result = self.get_weather(latitude, longitude, location_name)
                                         tool_result_text = self.format_tool_result("get_weather", weather_result)
                                         tool_results.append(tool_result_text)
                                         

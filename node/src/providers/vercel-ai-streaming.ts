@@ -64,7 +64,10 @@ export class VercelAIStreamingProvider extends StreamingProvider {
     const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-      posthogPrivacyMode: false
+      posthogPrivacyMode: false,
+      posthogProperties: {
+        $ai_span_name: "vercel_ai_stream_text",
+      },
     });
 
     try {
@@ -76,10 +79,12 @@ export class VercelAIStreamingProvider extends StreamingProvider {
           get_weather: {
             description: 'Get the current weather for a specific location',
             inputSchema: z.object({
-              location: z.string().describe('The city or location name to get weather for')
+              latitude: z.number().describe('The latitude of the location (e.g., 37.7749 for San Francisco)'),
+              longitude: z.number().describe('The longitude of the location (e.g., -122.4194 for San Francisco)'),
+              location_name: z.string().describe('A human-readable name for the location (e.g., \'San Francisco, CA\' or \'Dublin, Ireland\')')
             }),
-            execute: async ({ location }: { location: string }) => {
-              return this.getWeather(location);
+            execute: async ({ latitude, longitude, location_name }: { latitude: number; longitude: number; location_name: string }) => {
+              return this.getWeather(latitude, longitude, location_name);
             }
           }
         }
@@ -143,8 +148,10 @@ export class VercelAIStreamingProvider extends StreamingProvider {
         let toolResultsText = '';
         for (const toolCall of toolCalls) {
           if (toolCall.toolName === 'get_weather') {
-            const location = toolCall.args.location || 'unknown';
-            const weatherResult = this.getWeather(location);
+            const latitude = toolCall.args.latitude || 0.0;
+            const longitude = toolCall.args.longitude || 0.0;
+            const locationName = toolCall.args.location_name;
+            const weatherResult = await this.getWeather(latitude, longitude, locationName);
             toolResultsText += this.formatToolResult('get_weather', weatherResult);
           }
         }

@@ -17,7 +17,10 @@ export class LangChainProvider extends BaseProvider {
   constructor(posthogClient: PostHog) {
     super(posthogClient);
     this.callbackHandler = new LangChainCallbackHandler({
-      client: posthogClient
+      client: posthogClient,
+      properties: {
+        $ai_span_name: "langchain_chat",
+      },
     });
 
     this.langchainMessages = [
@@ -37,10 +40,12 @@ export class LangChainProvider extends BaseProvider {
       name: 'get_weather',
       description: 'Get the current weather for a specific location',
       schema: z.object({
-        location: z.string().describe('The city or location name to get weather for'),
+        latitude: z.number().describe('The latitude of the location (e.g., 37.7749 for San Francisco)'),
+        longitude: z.number().describe('The longitude of the location (e.g., -122.4194 for San Francisco)'),
+        location_name: z.string().describe('A human-readable name for the location (e.g., \'San Francisco, CA\' or \'Dublin, Ireland\')'),
       }),
-      func: async (input: { location: string }) => {
-        return this.getWeather(input.location);
+      func: async (input: { latitude: number; longitude: number; location_name: string }) => {
+        return this.getWeather(input.latitude, input.longitude, input.location_name);
       }
     } as any) as any;
 

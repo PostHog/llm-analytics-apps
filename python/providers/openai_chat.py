@@ -15,6 +15,10 @@ from .constants import (
 class OpenAIChatProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "openai_chat_completions"}
+
         self.client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             posthog_client=posthog_client
@@ -37,16 +41,24 @@ class OpenAIChatProvider(BaseProvider):
                 "type": "function",
                 "function": {
                     "name": "get_weather",
-                    "description": "Get the current weather for a specific location",
+                    "description": "Get the current weather for a specific location using geographical coordinates",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "location": {
+                            "latitude": {
+                                "type": "number",
+                                "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
+                            },
+                            "longitude": {
+                                "type": "number",
+                                "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
+                            },
+                            "location_name": {
                                 "type": "string",
-                                "description": "The city or location name to get weather for"
+                                "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
                             }
                         },
-                        "required": ["location"]
+                        "required": ["latitude", "longitude", "location_name"]
                     }
                 }
             }
@@ -100,9 +112,10 @@ class OpenAIChatProvider(BaseProvider):
         model_name = OPENAI_VISION_MODEL if base64_image else OPENAI_CHAT_MODEL
 
         # Prepare API request parameters
+        # Note: gpt-5-mini and newer models use max_completion_tokens instead of max_tokens
         request_params = {
             "model": model_name,
-            "max_tokens": DEFAULT_MAX_TOKENS,
+            "max_completion_tokens": DEFAULT_MAX_TOKENS,
             "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
             "messages": self.messages,
             "tools": self.tools,
@@ -133,8 +146,10 @@ class OpenAIChatProvider(BaseProvider):
                 if tool_call.function.name == "get_weather":
                     try:
                         arguments = json.loads(tool_call.function.arguments)
-                        location = arguments.get("location", "unknown")
-                        weather_result = self.get_weather(location)
+                        latitude = arguments.get("latitude", 0.0)
+                        longitude = arguments.get("longitude", 0.0)
+                        location_name = arguments.get("location_name")
+                        weather_result = self.get_weather(latitude, longitude, location_name)
                         tool_result_text = self.format_tool_result("get_weather", weather_result)
                         display_parts.append(tool_result_text)
                         
