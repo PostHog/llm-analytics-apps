@@ -1,8 +1,4 @@
 import { PostHog } from "posthog-node";
-import {
-  WEATHER_TEMP_MIN_CELSIUS,
-  WEATHER_TEMP_MAX_CELSIUS,
-} from "./constants.js";
 
 export interface Message {
   role: string;
@@ -54,12 +50,91 @@ export abstract class BaseProvider {
     return [];
   }
 
-  protected getWeather(location: string): string {
-    // Generate random temperature using configured range
-    const range = WEATHER_TEMP_MAX_CELSIUS - WEATHER_TEMP_MIN_CELSIUS + 1;
-    const tempCelsius = Math.floor(Math.random() * range) + WEATHER_TEMP_MIN_CELSIUS;
-    const tempFahrenheit = Math.floor(tempCelsius * 9/5 + 32);
-    return `The current weather in ${location} is ${tempCelsius}°C (${tempFahrenheit}°F) with partly cloudy skies and light winds.`;
+  protected async getWeather(
+    latitude: number,
+    longitude: number,
+    locationName?: string
+  ): Promise<string> {
+    try {
+      // Get weather data from Open-Meteo API
+      const weatherUrl = "https://api.open-meteo.com/v1/forecast";
+      const params = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+        current: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
+        temperature_unit: "celsius",
+        wind_speed_unit: "kmh",
+        precipitation_unit: "mm",
+      });
+
+      const response = await fetch(`${weatherUrl}?${params}`);
+      const data: any = await response.json();
+
+      if (data.current) {
+        const current: any = data.current;
+        const tempCelsius = current.temperature_2m;
+        const tempFahrenheit = (tempCelsius * 9 / 5 + 32).toFixed(1);
+        const humidity = current.relative_humidity_2m;
+        const feelsLike = current.apparent_temperature;
+        const precipitation = current.precipitation;
+        const windSpeed = current.wind_speed_10m;
+        const weatherCode = current.weather_code;
+
+        // Interpret WMO weather code
+        const weatherDescriptions: { [key: number]: string } = {
+          0: "clear skies",
+          1: "mainly clear",
+          2: "partly cloudy",
+          3: "overcast",
+          45: "foggy",
+          48: "depositing rime fog",
+          51: "light drizzle",
+          53: "moderate drizzle",
+          55: "dense drizzle",
+          61: "slight rain",
+          63: "moderate rain",
+          65: "heavy rain",
+          71: "slight snow",
+          73: "moderate snow",
+          75: "heavy snow",
+          77: "snow grains",
+          80: "slight rain showers",
+          81: "moderate rain showers",
+          82: "violent rain showers",
+          85: "slight snow showers",
+          86: "heavy snow showers",
+          95: "thunderstorm",
+          96: "thunderstorm with slight hail",
+          99: "thunderstorm with heavy hail",
+        };
+
+        const weatherDesc =
+          weatherDescriptions[weatherCode] || `weather code ${weatherCode}`;
+
+        // Use location name if provided, otherwise fall back to coordinates
+        const locationStr = locationName
+          ? locationName
+          : `coordinates (${latitude}, ${longitude})`;
+
+        let result = `The current weather in ${locationStr} is ${tempCelsius}°C (${tempFahrenheit}°F) with ${weatherDesc}.`;
+
+        if (feelsLike !== tempCelsius) {
+          result += ` It feels like ${feelsLike}°C.`;
+        }
+
+        result += ` Humidity is ${humidity}%. Wind speed is ${windSpeed} km/h.`;
+
+        if (precipitation > 0) {
+          result += ` Precipitation: ${precipitation} mm.`;
+        }
+
+        return result;
+      } else {
+        return `Unable to fetch weather data for ${locationName || `coordinates (${latitude}, ${longitude})`}`;
+      }
+    } catch (error: any) {
+      return `Error fetching weather: ${error?.message || "Unknown error"}`;
+    }
   }
 
   protected formatToolResult(toolName: string, result: string): string {
