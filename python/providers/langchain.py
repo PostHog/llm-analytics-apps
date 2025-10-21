@@ -31,16 +31,18 @@ class LangChainProvider(BaseProvider):
     def _setup_chain(self):
         """Setup the LangChain chain with tools"""
         @tool
-        def get_weather(location: str) -> str:
-            """Get the current weather for a specific location.
-            
+        def get_weather(latitude: float, longitude: float, location_name: str) -> str:
+            """Get the current weather for a specific location using geographical coordinates.
+
             Args:
-                location: The city or location name to get weather for
-            
+                latitude: The latitude of the location (e.g., 37.7749 for San Francisco)
+                longitude: The longitude of the location (e.g., -122.4194 for San Francisco)
+                location_name: A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')
+
             Returns:
                 Weather information for the specified location
             """
-            return self.get_weather(location)
+            return self.get_weather(latitude, longitude, location_name)
         
         self.langchain_tools = [get_weather]
         self.tool_map = {tool.name: tool for tool in self.langchain_tools}
