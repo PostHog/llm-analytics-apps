@@ -27,16 +27,24 @@ class OpenAIStreamingProvider(StreamingProvider):
             {
                 "type": "function",
                 "name": "get_weather",
-                "description": "Get the current weather for a specific location",
+                "description": "Get the current weather for a specific location using geographical coordinates",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "location": {
+                        "latitude": {
+                            "type": "number",
+                            "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
+                        },
+                        "longitude": {
+                            "type": "number",
+                            "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
+                        },
+                        "location_name": {
                             "type": "string",
-                            "description": "The city or location name to get weather for"
+                            "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
                         }
                     },
-                    "required": ["location"]
+                    "required": ["latitude", "longitude", "location_name"]
                 }
             }
         ]
@@ -141,9 +149,11 @@ class OpenAIStreamingProvider(StreamingProvider):
                                         arguments = json.loads(chunk.arguments)
                                     except json.JSONDecodeError:
                                         arguments = {}
-                                    
-                                    location = arguments.get("location", "unknown")
-                                    weather_result = self.get_weather(location)
+
+                                    latitude = arguments.get("latitude", 0.0)
+                                    longitude = arguments.get("longitude", 0.0)
+                                    location_name = arguments.get("location_name")
+                                    weather_result = self.get_weather(latitude, longitude, location_name)
                                     tool_result_text = self.format_tool_result("get_weather", weather_result)
                                     yield "\n\n" + tool_result_text
                                     
@@ -187,8 +197,10 @@ class OpenAIStreamingProvider(StreamingProvider):
                 if tool_call.get("arguments") and tool_call.get("name") == "get_weather":
                     try:
                         args = json.loads(tool_call["arguments"])
-                        location = args.get("location", "unknown")
-                        weather_result = self.get_weather(location)
+                        latitude = args.get("latitude", 0.0)
+                        longitude = args.get("longitude", 0.0)
+                        location_name = args.get("location_name")
+                        weather_result = self.get_weather(latitude, longitude, location_name)
 
                         # Add tool result as output_text for conversation history
                         # For client-side history management, add as assistant message with output_text
