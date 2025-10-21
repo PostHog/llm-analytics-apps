@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local
+.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather
 
 run-python:
 	@cd python && ./run.sh
@@ -30,4 +30,8 @@ python-install-reset:
 # Usage: make python-install-local POSTHOG_PYTHON_PATH=/absolute/path/to/posthog-python
 python-install-local:
 	@cd python && INSTALL_ONLY=1 POSTHOG_PYTHON_PATH="$(POSTHOG_PYTHON_PATH)" ./run.sh
+
+## Test Python weather tool functionality
+test-python-weather:
+	@cd python && ./scripts/run_test.sh
 

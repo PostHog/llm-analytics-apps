@@ -27,16 +27,24 @@ class AnthropicStreamingProvider(StreamingProvider):
         return [
             {
                 "name": "get_weather",
-                "description": "Get the current weather for a specific location",
+                "description": "Get the current weather for a specific location using geographical coordinates",
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "location": {
+                        "latitude": {
+                            "type": "number",
+                            "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
+                        },
+                        "longitude": {
+                            "type": "number",
+                            "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
+                        },
+                        "location_name": {
                             "type": "string",
-                            "description": "The city or location name to get weather for"
+                            "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
                         }
                     },
-                    "required": ["location"]
+                    "required": ["latitude", "longitude", "location_name"]
                 }
             }
         ]
@@ -202,8 +210,10 @@ class AnthropicStreamingProvider(StreamingProvider):
                             
                             # Execute the tool
                             if last_tool["name"] == "get_weather":
-                                location = last_tool["input"].get("location", "unknown")
-                                weather_result = self.get_weather(location)
+                                latitude = last_tool["input"].get("latitude", 0.0)
+                                longitude = last_tool["input"].get("longitude", 0.0)
+                                location_name = last_tool["input"].get("location_name")
+                                weather_result = self.get_weather(latitude, longitude, location_name)
                                 tool_result_text = self.format_tool_result("get_weather", weather_result)
                                 yield "\n\n" + tool_result_text
                         except (json.JSONDecodeError, AttributeError):
@@ -241,8 +251,10 @@ class AnthropicStreamingProvider(StreamingProvider):
         # If tools were used, add tool results to messages
         for tool in tools_used:
             if tool.get("name") == "get_weather" and tool.get("input"):
-                location = tool["input"].get("location", "unknown")
-                weather_result = self.get_weather(location)
+                latitude = tool["input"].get("latitude", 0.0)
+                longitude = tool["input"].get("longitude", 0.0)
+                location_name = tool["input"].get("location_name")
+                weather_result = self.get_weather(latitude, longitude, location_name)
                 
                 tool_result_message = {
                     "role": "user",
