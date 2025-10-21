@@ -8,6 +8,10 @@ from .constants import GEMINI_MODEL, DEFAULT_POSTHOG_DISTINCT_ID
 class GeminiProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "gemini_generate_content"}
+
         self.client = Client(
             api_key=os.getenv("GEMINI_API_KEY"),
             # vertexai=True,

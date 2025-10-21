@@ -11,8 +11,12 @@ from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASS
 class LangChainProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "langchain_chat"}
+
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        
+
         self.callback_handler = CallbackHandler(
             client=posthog_client
         )

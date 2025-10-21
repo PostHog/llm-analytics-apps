@@ -16,6 +16,10 @@ from .constants import (
 class OpenAIChatStreamingProvider(StreamingProvider):
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "openai_chat_completions_streaming"}
+
         self.client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             posthog_client=posthog_client

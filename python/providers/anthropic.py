@@ -13,6 +13,10 @@ from .constants import (
 class AnthropicProvider(BaseProvider):
     def __init__(self, posthog_client: Posthog, enable_thinking: bool = False, thinking_budget: int = None):
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "anthropic_messages"}
+
         self.client = Anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             posthog_client=posthog_client

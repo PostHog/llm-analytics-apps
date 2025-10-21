@@ -18,7 +18,7 @@ class LiteLLMProvider(BaseProvider):
         # Set PostHog configuration environment variables
         os.environ["POSTHOG_API_KEY"] = os.getenv("POSTHOG_API_KEY", "")
         os.environ["POSTHOG_API_URL"] = os.getenv("POSTHOG_HOST", "https://app.posthog.com")
-        
+
         # Use string-based callbacks - our fixed PostHogLogger will handle both sync and async
         try:
             litellm.success_callback = ["posthog"]
@@ -26,8 +26,12 @@ class LiteLLMProvider(BaseProvider):
             logging.getLogger(__name__).info("PostHog LiteLLM integration enabled")
         except Exception as e:
             logging.getLogger(__name__).warning(f"PostHog setup failed: {e}, continuing without PostHog")
-        
+
         super().__init__(posthog_client)
+
+        # Set span name for this provider
+        posthog_client.super_properties = {"$ai_span_name": "litellm_completion"}
+
         self.model = OPENAI_CHAT_MODEL  # Default model
     
     def get_tool_definitions(self):
