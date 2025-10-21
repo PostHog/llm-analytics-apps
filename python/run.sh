@@ -51,6 +51,12 @@ source venv/bin/activate
 echo -e "${YELLOW}⬆️  Upgrading pip...${NC}"
 pip install --upgrade pip
 
+# Optionally reset PostHog install (useful when switching between local and PyPI)
+if [ "${RESET_POSTHOG}" = "1" ]; then
+    echo -e "${YELLOW}🧹 Removing existing posthog installation (RESET_POSTHOG=1)...${NC}"
+    pip uninstall -y posthog || true
+fi
+
 # Install requirements
 echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 
@@ -94,6 +100,13 @@ fi
 
 echo -e "${GREEN}✅ Setup complete!${NC}"
 echo ""
+
+# If only installing, stop here
+if [ "${INSTALL_ONLY}" = "1" ]; then
+    echo -e "${BLUE}ℹ️  INSTALL_ONLY=1 set; skipping app run.${NC}"
+    deactivate
+    exit 0
+fi
 
 # Clear terminal only after successful setup
 clear
