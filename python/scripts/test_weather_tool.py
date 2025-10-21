@@ -19,8 +19,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from posthog import Posthog
 from providers.anthropic import AnthropicProvider
 from providers.anthropic_streaming import AnthropicStreamingProvider
+from providers.gemini import GeminiProvider
+from providers.gemini_streaming import GeminiStreamingProvider
+from providers.openai import OpenAIProvider
+from providers.openai_streaming import OpenAIStreamingProvider
 from providers.openai_chat import OpenAIChatProvider
 from providers.openai_chat_streaming import OpenAIChatStreamingProvider
+from providers.langchain import LangChainProvider
+from providers.litellm_provider import LiteLLMProvider
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -30,8 +36,14 @@ load_dotenv()
 AVAILABLE_PROVIDERS = {
     'anthropic': (AnthropicProvider, "Anthropic Provider", False),
     'anthropic-streaming': (AnthropicStreamingProvider, "Anthropic Streaming Provider", True),
-    'openai-chat': (OpenAIChatProvider, "OpenAI Chat Provider", False),
-    'openai-chat-streaming': (OpenAIChatStreamingProvider, "OpenAI Chat Streaming Provider", True),
+    'gemini': (GeminiProvider, "Google Gemini Provider", False),
+    'gemini-streaming': (GeminiStreamingProvider, "Google Gemini Streaming Provider", True),
+    'openai': (OpenAIProvider, "OpenAI Responses API Provider", False),
+    'openai-streaming': (OpenAIStreamingProvider, "OpenAI Responses API Streaming Provider", True),
+    'openai-chat': (OpenAIChatProvider, "OpenAI Chat Completions Provider", False),
+    'openai-chat-streaming': (OpenAIChatStreamingProvider, "OpenAI Chat Completions Streaming Provider", True),
+    'langchain': (LangChainProvider, "LangChain Provider", False),
+    'litellm': (LiteLLMProvider, "LiteLLM Provider", False),
 }
 
 def init_posthog():
