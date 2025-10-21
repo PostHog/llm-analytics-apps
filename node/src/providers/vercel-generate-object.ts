@@ -52,8 +52,8 @@ const taskPlanSchema = z.object({
 export class VercelGenerateObjectProvider extends BaseProvider {
   private openaiClient: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.openaiClient = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!
     });
@@ -212,7 +212,11 @@ export class VercelGenerateObjectProvider extends BaseProvider {
     const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
     const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-      posthogPrivacyMode: false
+      posthogPrivacyMode: false,
+      posthogProperties: {
+        $ai_span_name: "vercel_ai_generate_object",
+        ...this.getPostHogProperties(),
+      },
     });
 
     try {

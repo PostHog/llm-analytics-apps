@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 import * as readline from 'readline';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { PostHog } from 'posthog-node';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { AnthropicStreamingProvider } from './providers/anthropic-streaming.js';
@@ -31,6 +32,14 @@ if (process.env.DEBUG === '1') {
   console.log("=".repeat(80) + "\n");
 }
 
+// Generate session ID for grouping traces (if enabled)
+function shouldEnableSessionId(): boolean {
+  const value = process.env.ENABLE_AI_SESSION_ID || 'True';
+  return ['true', '1', 'yes'].includes(value.toLowerCase());
+}
+
+const aiSessionId = shouldEnableSessionId() ? randomUUID() : null;
+
 const posthog = new PostHog(
   process.env.POSTHOG_API_KEY!,
   {
@@ -39,6 +48,12 @@ const posthog = new PostHog(
     flushInterval: 0  // Don't wait for interval, flush immediately
   }
 );
+
+// Show session ID message if enabled
+if (aiSessionId) {
+  console.log(`\n🔗 AI Session ID enabled: ${aiSessionId}`);
+  console.log('All traces in this session will be grouped together.\n');
+}
 
 // Enable debug mode to see PostHog events
 // posthog.debug();
@@ -218,31 +233,31 @@ async function promptThinkingConfig(): Promise<{ enableThinking: boolean; thinki
 function createProvider(choice: string, enableThinking: boolean = false, thinkingBudget?: number): any {
   switch (choice) {
     case '1':
-      return new AnthropicProvider(posthog, enableThinking, thinkingBudget);
+      return new AnthropicProvider(posthog, enableThinking, thinkingBudget, aiSessionId);
     case '2':
-      return new AnthropicStreamingProvider(posthog, enableThinking, thinkingBudget);
+      return new AnthropicStreamingProvider(posthog, enableThinking, thinkingBudget, aiSessionId);
     case '3':
-      return new GeminiProvider(posthog);
+      return new GeminiProvider(posthog, aiSessionId);
     case '4':
-      return new GeminiStreamingProvider(posthog);
+      return new GeminiStreamingProvider(posthog, aiSessionId);
     case '5':
-      return new LangChainProvider(posthog);
+      return new LangChainProvider(posthog, aiSessionId);
     case '6':
-      return new OpenAIProvider(posthog);
+      return new OpenAIProvider(posthog, aiSessionId);
     case '7':
-      return new OpenAIStreamingProvider(posthog);
+      return new OpenAIStreamingProvider(posthog, aiSessionId);
     case '8':
-      return new OpenAIChatProvider(posthog);
+      return new OpenAIChatProvider(posthog, aiSessionId);
     case '9':
-      return new OpenAIChatStreamingProvider(posthog);
+      return new OpenAIChatStreamingProvider(posthog, aiSessionId);
     case '10':
-      return new VercelAIProvider(posthog);
+      return new VercelAIProvider(posthog, aiSessionId);
     case '11':
-      return new VercelAIStreamingProvider(posthog);
+      return new VercelAIStreamingProvider(posthog, aiSessionId);
     case '12':
-      return new VercelGenerateObjectProvider(posthog);
+      return new VercelGenerateObjectProvider(posthog, aiSessionId);
     case '13':
-      return new VercelStreamObjectProvider(posthog);
+      return new VercelStreamObjectProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }

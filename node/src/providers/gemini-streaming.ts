@@ -8,8 +8,8 @@ export class GeminiStreamingProvider extends StreamingProvider {
   private history: any[] = [];
   private config: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogGoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY!,
       // vertexai: true,
@@ -95,6 +95,7 @@ export class GeminiStreamingProvider extends StreamingProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "gemini_generate_content_streaming",
+        ...this.getPostHogProperties(),
       },
       contents: this.history,
       config: this.config

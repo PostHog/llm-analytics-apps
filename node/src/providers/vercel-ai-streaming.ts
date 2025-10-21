@@ -9,8 +9,8 @@ import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POS
 export class VercelAIStreamingProvider extends StreamingProvider {
   private openaiClient: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.openaiClient = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!
     });
@@ -67,6 +67,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
       posthogPrivacyMode: false,
       posthogProperties: {
         $ai_span_name: "vercel_ai_stream_text",
+        ...this.getPostHogProperties(),
       },
     });
 

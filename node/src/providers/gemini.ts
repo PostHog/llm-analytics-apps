@@ -8,8 +8,8 @@ export class GeminiProvider extends BaseProvider {
   private history: any[] = [];
   private config: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogGoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY!,
       // vertexai: true,
@@ -91,6 +91,7 @@ export class GeminiProvider extends BaseProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "gemini_generate_content",
+        ...this.getPostHogProperties(),
       },
       contents: this.history,
       config: this.config

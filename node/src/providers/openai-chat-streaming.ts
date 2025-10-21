@@ -6,8 +6,8 @@ import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT
 export class OpenAIChatStreamingProvider extends StreamingProvider {
   private client: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
       posthog: posthogClient
@@ -105,6 +105,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "openai_chat_completions_streaming",
+        ...this.getPostHogProperties(),
       },
       messages: this.messages,
       tools: this.tools,

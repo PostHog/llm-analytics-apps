@@ -6,6 +6,7 @@ Supports multiple LLM providers: Anthropic, Gemini, LangChain, and OpenAI
 
 import os
 import platform
+import uuid
 from dotenv import load_dotenv
 from posthog import Posthog
 from providers.anthropic import AnthropicProvider
@@ -28,11 +29,26 @@ if os.getenv('DEBUG') == '1':
     print("🐛 DEBUG MODE ENABLED")
     print("=" * 80 + "\n")
 
-# Initialize PostHog client (shared across all providers)
+# Generate session ID for grouping traces (if enabled)
+def should_enable_session_id():
+    """Check if session ID should be enabled based on env var"""
+    value = os.getenv("ENABLE_AI_SESSION_ID", "True")
+    return value.lower() in ("true", "1", "yes")
+
+ai_session_id = str(uuid.uuid4()) if should_enable_session_id() else None
+
+# Initialize PostHog client with super_properties for session ID
+super_properties = {"$ai_session_id": ai_session_id} if ai_session_id else None
+
 posthog = Posthog(
     os.getenv("POSTHOG_API_KEY"),
-    host=os.getenv("POSTHOG_HOST", "https://app.posthog.com")
+    host=os.getenv("POSTHOG_HOST", "https://app.posthog.com"),
+    super_properties=super_properties
 )
+
+if ai_session_id:
+    print(f"\n🔗 AI Session ID enabled: {ai_session_id}")
+    print("All traces in this session will be grouped together.\n")
 
 def clear_screen():
     """Clear the terminal screen"""
