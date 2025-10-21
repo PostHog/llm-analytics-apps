@@ -32,12 +32,20 @@ export class AnthropicStreamingProvider extends StreamingProvider {
         input_schema: {
           type: "object",
           properties: {
-            location: {
+            latitude: {
+              type: "number",
+              description: "The latitude of the location (e.g., 37.7749 for San Francisco)",
+            },
+            longitude: {
+              type: "number",
+              description: "The longitude of the location (e.g., -122.4194 for San Francisco)",
+            },
+            location_name: {
               type: "string",
-              description: "The city or location name to get weather for",
+              description: "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')",
             },
           },
-          required: ["location"],
+          required: ["latitude", "longitude", "location_name"],
         },
       },
     ];
@@ -215,8 +223,10 @@ export class AnthropicStreamingProvider extends StreamingProvider {
 
               // Execute the tool
               if (lastTool.name === "get_weather") {
-                const location = lastTool.input.location || "unknown";
-                const weatherResult = this.getWeather(location);
+                const latitude = lastTool.input.latitude || 0.0;
+                const longitude = lastTool.input.longitude || 0.0;
+                const locationName = lastTool.input.location_name;
+                const weatherResult = await this.getWeather(latitude, longitude, locationName);
                 const toolResultText = this.formatToolResult(
                   "get_weather",
                   weatherResult,
@@ -250,8 +260,10 @@ export class AnthropicStreamingProvider extends StreamingProvider {
     // If tools were used, add tool results to messages
     for (const tool of toolsUsed) {
       if (tool.name === "get_weather") {
-        const location = tool.input.location || "unknown";
-        const weatherResult = this.getWeather(location);
+        const latitude = tool.input.latitude || 0.0;
+        const longitude = tool.input.longitude || 0.0;
+        const locationName = tool.input.location_name;
+        const weatherResult = await this.getWeather(latitude, longitude, locationName);
 
         const toolResultMessage: Message = {
           role: "user",

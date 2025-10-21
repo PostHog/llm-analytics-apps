@@ -30,17 +30,25 @@ export class GeminiStreamingProvider extends StreamingProvider {
       parameters: {
         type: 'object',
         properties: {
-          location: {
+          latitude: {
+            type: 'number',
+            description: 'The latitude of the location (e.g., 37.7749 for San Francisco)',
+          },
+          longitude: {
+            type: 'number',
+            description: 'The longitude of the location (e.g., -122.4194 for San Francisco)',
+          },
+          location_name: {
             type: 'string',
-            description: 'The city name, e.g. San Francisco',
+            description: 'A human-readable name for the location (e.g., \'San Francisco, CA\' or \'Dublin, Ireland\')',
           },
         },
-        required: ['location'],
+        required: ['latitude', 'longitude', 'location_name'],
       },
     };
 
-    return [{ 
-      functionDeclarations: [weatherFunction] 
+    return [{
+      functionDeclarations: [weatherFunction]
     }] as any;
   }
 
@@ -116,14 +124,16 @@ export class GeminiStreamingProvider extends StreamingProvider {
                 const functionCall = part.functionCall;
                 
                 if (functionCall.name === 'get_current_weather') {
-                  const location = functionCall.args?.location || 'unknown';
-                  const weatherResult = this.getWeather(location);
+                  const latitude = functionCall.args?.latitude || 0.0;
+                  const longitude = functionCall.args?.longitude || 0.0;
+                  const locationName = functionCall.args?.location_name;
+                  const weatherResult = await this.getWeather(latitude, longitude, locationName);
                   const toolResultText = this.formatToolResult('get_weather', weatherResult);
                   toolResults.push(toolResultText);
-                  
+
                   // Yield the tool result to the stream
                   yield '\n\n' + toolResultText;
-                  
+
                   // Track the function call for history
                   modelParts.push({ functionCall });
                 }

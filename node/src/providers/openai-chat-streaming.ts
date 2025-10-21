@@ -34,12 +34,20 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
           parameters: {
             type: 'object',
             properties: {
-              location: {
+              latitude: {
+                type: 'number',
+                description: 'The latitude of the location (e.g., 37.7749 for San Francisco)'
+              },
+              longitude: {
+                type: 'number',
+                description: 'The longitude of the location (e.g., -122.4194 for San Francisco)'
+              },
+              location_name: {
                 type: 'string',
-                description: 'The city or location name to get weather for'
+                description: 'A human-readable name for the location (e.g., \'San Francisco, CA\' or \'Dublin, Ireland\')'
               }
             },
-            required: ['location']
+            required: ['latitude', 'longitude', 'location_name']
           }
         }
       }
@@ -165,8 +173,10 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
           if (toolCall.function.name === 'get_weather') {
             try {
               const args = JSON.parse(toolCall.function.arguments);
-              const location = args.location || 'unknown';
-              const weatherResult = this.getWeather(location);
+              const latitude = args.latitude || 0.0;
+              const longitude = args.longitude || 0.0;
+              const locationName = args.location_name;
+              const weatherResult = await this.getWeather(latitude, longitude, locationName);
               const toolResultText = this.formatToolResult('get_weather', weatherResult);
               yield '\n\n' + toolResultText;
             } catch (e) {
@@ -202,8 +212,10 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
       if (toolCall.function.name === 'get_weather') {
         try {
           const args = JSON.parse(toolCall.function.arguments);
-          const location = args.location || 'unknown';
-          const weatherResult = this.getWeather(location);
+          const latitude = args.latitude || 0.0;
+          const longitude = args.longitude || 0.0;
+          const locationName = args.location_name;
+          const weatherResult = await this.getWeather(latitude, longitude, locationName);
 
           const toolResultMessage: any = {
             role: 'tool',
