@@ -108,6 +108,9 @@ export class OpenAIChatProvider extends BaseProvider {
       model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,  // Use vision model for images
       max_tokens: DEFAULT_MAX_TOKENS,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: {
+        $ai_span_name: "openai_chat_completions",
+      },
       messages: this.messages,
       tools: this.tools,
       tool_choice: 'auto'

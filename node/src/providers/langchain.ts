@@ -17,7 +17,10 @@ export class LangChainProvider extends BaseProvider {
   constructor(posthogClient: PostHog) {
     super(posthogClient);
     this.callbackHandler = new LangChainCallbackHandler({
-      client: posthogClient
+      client: posthogClient,
+      properties: {
+        $ai_span_name: "langchain_chat",
+      },
     });
 
     this.langchainMessages = [

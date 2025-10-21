@@ -93,6 +93,9 @@ export class OpenAIStreamingProvider extends StreamingProvider {
       model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
       max_output_tokens: DEFAULT_MAX_TOKENS,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: {
+        $ai_span_name: "openai_responses_streaming",
+      },
       input: this.messages,
       instructions: SYSTEM_PROMPT_FRIENDLY,
       tools: this.tools,

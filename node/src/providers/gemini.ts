@@ -89,6 +89,9 @@ export class GeminiProvider extends BaseProvider {
     const requestParams = {
       model: GEMINI_MODEL,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: {
+        $ai_span_name: "gemini_generate_content",
+      },
       contents: this.history,
       config: this.config
     };

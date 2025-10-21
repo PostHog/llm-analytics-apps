@@ -93,6 +93,9 @@ export class GeminiStreamingProvider extends StreamingProvider {
     const requestParams = {
       model: GEMINI_MODEL,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: {
+        $ai_span_name: "gemini_generate_content_streaming",
+      },
       contents: this.history,
       config: this.config
     };
