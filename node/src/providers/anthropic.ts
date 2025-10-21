@@ -94,6 +94,7 @@ export class AnthropicProvider extends BaseProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "anthropic_messages",
+        ...this.getPostHogProperties(),
       },
       tools: this.tools,
       messages: this.messages,

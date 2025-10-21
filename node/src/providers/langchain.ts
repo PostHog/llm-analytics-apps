@@ -20,6 +20,7 @@ export class LangChainProvider extends BaseProvider {
       client: posthogClient,
       properties: {
         $ai_span_name: "langchain_chat",
+        ...this.getPostHogProperties(),
       },
     });
 

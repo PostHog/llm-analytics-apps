@@ -91,6 +91,7 @@ export class GeminiProvider extends BaseProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "gemini_generate_content",
+        ...this.getPostHogProperties(),
       },
       contents: this.history,
       config: this.config

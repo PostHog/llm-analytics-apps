@@ -96,6 +96,7 @@ export class AnthropicStreamingProvider extends StreamingProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "anthropic_messages_streaming",
+        ...this.getPostHogProperties(),
       },
       tools: this.tools,
       messages: this.messages,

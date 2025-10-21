@@ -105,6 +105,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
       posthogProperties: {
         $ai_span_name: "openai_chat_completions_streaming",
+        ...this.getPostHogProperties(),
       },
       messages: this.messages,
       tools: this.tools,

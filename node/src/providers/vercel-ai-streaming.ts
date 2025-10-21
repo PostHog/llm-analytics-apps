@@ -67,6 +67,7 @@ export class VercelAIStreamingProvider extends StreamingProvider {
       posthogPrivacyMode: false,
       posthogProperties: {
         $ai_span_name: "vercel_ai_stream_text",
+        ...this.getPostHogProperties(),
       },
     });
 

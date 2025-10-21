@@ -67,6 +67,7 @@ export class VercelAIProvider extends BaseProvider {
         posthogPrivacyMode: false,
         posthogProperties: {
           $ai_span_name: "vercel_ai_generate_text",
+          ...this.getPostHogProperties(),
         },
       });
 
