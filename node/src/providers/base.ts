@@ -28,11 +28,17 @@ export abstract class BaseProvider {
   protected messages: Message[] = [];
   protected tools: Tool[] = [];
   protected debugMode: boolean;
+  protected aiSessionId: string | null;
 
-  constructor(posthogClient: PostHog) {
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
     this.posthogClient = posthogClient;
+    this.aiSessionId = aiSessionId;
     this.debugMode = process.env.DEBUG === '1';
     this.initializeTools();
+  }
+
+  protected getPostHogProperties(): Record<string, any> {
+    return this.aiSessionId ? { $ai_session_id: this.aiSessionId } : {};
   }
 
   protected initializeTools(): void {

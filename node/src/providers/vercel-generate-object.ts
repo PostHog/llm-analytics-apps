@@ -52,8 +52,8 @@ const taskPlanSchema = z.object({
 export class VercelGenerateObjectProvider extends BaseProvider {
   private openaiClient: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.openaiClient = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!
     });

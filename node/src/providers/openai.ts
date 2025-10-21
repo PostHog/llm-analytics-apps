@@ -6,8 +6,8 @@ import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_EMBEDDING_MODEL, DEFAULT
 export class OpenAIProvider extends BaseProvider {
   private client: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
       posthog: posthogClient
@@ -42,7 +42,8 @@ export class OpenAIProvider extends BaseProvider {
     const response = await this.client.embeddings.create({
       model: model,
       input: text,
-      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID
+      posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: this.getPostHogProperties()
     });
 
     if (response.data && response.data.length > 0) {
@@ -82,6 +83,7 @@ export class OpenAIProvider extends BaseProvider {
       model: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL,
       max_output_tokens: DEFAULT_MAX_TOKENS,
       posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+      posthogProperties: this.getPostHogProperties(),
       input: this.messages,
       instructions: SYSTEM_PROMPT_FRIENDLY,
       tools: this.tools

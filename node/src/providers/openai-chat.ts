@@ -13,8 +13,8 @@ import {
 export class OpenAIChatProvider extends BaseProvider {
   private client: any;
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
       posthog: posthogClient

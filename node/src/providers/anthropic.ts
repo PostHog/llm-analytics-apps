@@ -14,8 +14,8 @@ export class AnthropicProvider extends BaseProvider {
   private enableThinking: boolean;
   private thinkingBudget: number;
 
-  constructor(posthogClient: PostHog, enableThinking: boolean = false, thinkingBudget?: number) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, enableThinking: boolean = false, thinkingBudget?: number, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.client = new PostHogAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
       posthog: posthogClient,

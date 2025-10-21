@@ -14,8 +14,8 @@ export class LangChainProvider extends BaseProvider {
   private langchainTools: any[] = [];
   private toolMap: Map<string, any> = new Map();
 
-  constructor(posthogClient: PostHog) {
-    super(posthogClient);
+  constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
+    super(posthogClient, aiSessionId);
     this.callbackHandler = new LangChainCallbackHandler({
       client: posthogClient
     });
