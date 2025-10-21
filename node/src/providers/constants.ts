@@ -18,7 +18,7 @@ export const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 export const GEMINI_MODEL = "gemini-2.5-flash";
 
 // Default API Parameters
-export const DEFAULT_MAX_TOKENS = 200;
+export const DEFAULT_MAX_TOKENS = 1000;
 
 // Extended Thinking Configuration (Anthropic)
 // Set ENABLE_THINKING=1 in .env to enable extended thinking
