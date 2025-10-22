@@ -17,7 +17,8 @@ class OpenAIProvider(BaseProvider):
         super().__init__(posthog_client)
 
         # Set span name for this provider
-        posthog_client.super_properties = {"$ai_span_name": "openai_responses"}
+        existing_props = posthog_client.super_properties or {}
+        posthog_client.super_properties = {**existing_props, "$ai_span_name": "openai_responses"}
 
         self.client = OpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),

@@ -13,7 +13,8 @@ class LangChainProvider(BaseProvider):
         super().__init__(posthog_client)
 
         # Set span name for this provider
-        posthog_client.super_properties = {"$ai_span_name": "langchain_chat"}
+        existing_props = posthog_client.super_properties or {}
+        posthog_client.super_properties = {**existing_props, "$ai_span_name": "langchain_chat"}
 
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 

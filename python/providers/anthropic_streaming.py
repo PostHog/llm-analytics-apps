@@ -17,7 +17,8 @@ class AnthropicStreamingProvider(StreamingProvider):
         super().__init__(posthog_client)
 
         # Set span name for this provider
-        posthog_client.super_properties = {"$ai_span_name": "anthropic_messages_streaming"}
+        existing_props = posthog_client.super_properties or {}
+        posthog_client.super_properties = {**existing_props, "$ai_span_name": "anthropic_messages_streaming"}
 
         self.client = Anthropic(
             api_key=os.getenv("ANTHROPIC_API_KEY"),

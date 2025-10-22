@@ -30,7 +30,8 @@ class LiteLLMProvider(BaseProvider):
         super().__init__(posthog_client)
 
         # Set span name for this provider
-        posthog_client.super_properties = {"$ai_span_name": "litellm_completion"}
+        existing_props = posthog_client.super_properties or {}
+        posthog_client.super_properties = {**existing_props, "$ai_span_name": "litellm_completion"}
 
         self.model = OPENAI_CHAT_MODEL  # Default model
     
