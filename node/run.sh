@@ -24,6 +24,11 @@ if [ -f "../.env" ]; then
     set +a
 fi
 
+# Run shared preparation (fetch/align local PostHog API key)
+if [ -f "../prepare.sh" ]; then
+    # shellcheck disable=SC1091
+    . ../prepare.sh
+fi
 
 echo -e "${BLUE}🚀 Unified AI Chatbot Setup${NC}"
 echo "=================================="
