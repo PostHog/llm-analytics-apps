@@ -108,6 +108,32 @@ if [ "${INSTALL_ONLY}" = "1" ]; then
     exit 0
 fi
 
+# Check if localhost PostHog API key differs from .env
+if [ -n "$POSTHOG_API_KEY" ] && [ "$POSTHOG_HOST" = "http://localhost:8010" ]; then
+    echo -e "${YELLOW}🔍 Checking for localhost PostHog API key...${NC}"
+    LOCALHOST_KEY=$(python scripts/get_localhost_api_key.py --quiet 2>/dev/null || echo "")
+
+    if [ -n "$LOCALHOST_KEY" ] && [ "$LOCALHOST_KEY" != "$POSTHOG_API_KEY" ]; then
+        echo -e "${YELLOW}⚠️  API key mismatch detected!${NC}"
+        echo -e "   .env file:      ${POSTHOG_API_KEY}"
+        echo -e "   localhost:      ${LOCALHOST_KEY}"
+        echo ""
+        read -p "Update .env file with localhost key? (y/N): " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Update the .env file
+            sed -i.bak "s|^POSTHOG_API_KEY=.*|POSTHOG_API_KEY=${LOCALHOST_KEY}|" ../.env
+            export POSTHOG_API_KEY="$LOCALHOST_KEY"
+            echo -e "${GREEN}✅ Updated .env file with localhost API key${NC}"
+        else
+            echo -e "${BLUE}ℹ️  Keeping existing .env API key${NC}"
+        fi
+    elif [ -n "$LOCALHOST_KEY" ]; then
+        echo -e "${GREEN}✅ API key matches localhost${NC}"
+    fi
+    echo ""
+fi
+
 # Clear terminal only after successful setup
 clear
 
