@@ -29,8 +29,11 @@ class LiteLLMProvider(BaseProvider):
 
         super().__init__(posthog_client)
 
-        # Set span name for this provider
+        # Extract session ID from super_properties if available
         existing_props = posthog_client.super_properties or {}
+        self.ai_session_id = existing_props.get("$ai_session_id")
+
+        # Set span name for this provider
         posthog_client.super_properties = {**existing_props, "$ai_span_name": "litellm_completion"}
 
         self.model = OPENAI_CHAT_MODEL  # Default model
@@ -105,10 +108,17 @@ class LiteLLMProvider(BaseProvider):
     def embed(self, text: str, model: str = OPENAI_EMBEDDING_MODEL) -> list:
         """Create embeddings using LiteLLM"""
         try:
+            # Prepare metadata for embedding
+            embed_metadata = {"distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog")}
+
+            # Add session ID to metadata if available
+            if self.ai_session_id:
+                embed_metadata["$ai_session_id"] = self.ai_session_id
+
             response = litellm.embedding(
                 model=model,
                 input=text,
-                metadata={"distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog")}
+                metadata=embed_metadata
             )
             
             # Extract embedding vector from response
@@ -155,16 +165,22 @@ class LiteLLMProvider(BaseProvider):
         
         try:
             # Prepare API request parameters
+            metadata = {
+                "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+            }
+
+            # Add session ID to metadata if available
+            if self.ai_session_id:
+                metadata["$ai_session_id"] = self.ai_session_id
+
             request_params = {
                 "model": model_to_use,
                 "messages": self.messages,
                 "tools": self.tools,
                 "tool_choice": "auto",
                 "max_tokens": DEFAULT_MAX_TOKENS,
-                "metadata": {
-                    "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
-                    "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
-                }
+                "metadata": metadata
             }
 
             # Send all messages in conversation history
@@ -232,14 +248,20 @@ class LiteLLMProvider(BaseProvider):
                 # Get final response after tool execution
                 try:
                     # Prepare API request parameters for final response
+                    final_metadata = {
+                        "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
+                        "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                    }
+
+                    # Add session ID to metadata if available
+                    if self.ai_session_id:
+                        final_metadata["$ai_session_id"] = self.ai_session_id
+
                     final_request_params = {
                         "model": model_to_use,
                         "messages": self.messages,
                         "max_tokens": DEFAULT_MAX_TOKENS,
-                        "metadata": {
-                            "distinct_id": os.getenv("POSTHOG_DISTINCT_ID", "user-hog"),
-                            "user_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
-                        }
+                        "metadata": final_metadata
                     }
 
                     final_response = litellm.completion(**final_request_params)
