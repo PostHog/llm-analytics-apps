@@ -34,10 +34,3 @@ python-install-local:
 ## Test Python weather tool functionality
 test-python-weather:
 	@cd python && ./scripts/run_test.sh
-
-## Ingest a trace JSON file into local PostHog for testing
-# Usage: make ingest-trace [FILE=path/to/trace.json]
-# If FILE not specified, uses example.json
-ingest-trace:
-	@./ingest_trace.sh $(FILE)
-
