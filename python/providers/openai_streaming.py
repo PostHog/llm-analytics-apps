@@ -51,6 +51,25 @@ class OpenAIStreamingProvider(StreamingProvider):
                     },
                     "required": ["latitude", "longitude", "location_name"]
                 }
+            },
+            {
+                "type": "function",
+                "name": "tell_joke",
+                "description": "Tell a joke with a question-style setup and an answer punchline",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "setup": {
+                            "type": "string",
+                            "description": "The setup or question part of the joke"
+                        },
+                        "punchline": {
+                            "type": "string",
+                            "description": "The punchline or answer part of the joke"
+                        }
+                    },
+                    "required": ["setup", "punchline"]
+                }
             }
         ]
     
@@ -161,7 +180,22 @@ class OpenAIStreamingProvider(StreamingProvider):
                                     weather_result = self.get_weather(latitude, longitude, location_name)
                                     tool_result_text = self.format_tool_result("get_weather", weather_result)
                                     yield "\n\n" + tool_result_text
-                                    
+
+                                    # Update the arguments
+                                    tool_call["arguments"] = chunk.arguments
+                                elif tool_call["name"] == "tell_joke":
+                                    arguments = {}
+                                    try:
+                                        arguments = json.loads(chunk.arguments)
+                                    except json.JSONDecodeError:
+                                        arguments = {}
+
+                                    setup = arguments.get("setup", "")
+                                    punchline = arguments.get("punchline", "")
+                                    joke_result = self.tell_joke(setup, punchline)
+                                    tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                                    yield "\n\n" + tool_result_text
+
                                     # Update the arguments
                                     tool_call["arguments"] = chunk.arguments
                     
@@ -212,6 +246,21 @@ class OpenAIStreamingProvider(StreamingProvider):
                         assistant_content_items.append({
                             "type": "output_text",
                             "text": weather_result
+                        })
+                    except json.JSONDecodeError:
+                        pass
+                elif tool_call.get("arguments") and tool_call.get("name") == "tell_joke":
+                    try:
+                        args = json.loads(tool_call["arguments"])
+                        setup = args.get("setup", "")
+                        punchline = args.get("punchline", "")
+                        joke_result = self.tell_joke(setup, punchline)
+
+                        # Add tool result as output_text for conversation history
+                        # For client-side history management, add as assistant message with output_text
+                        assistant_content_items.append({
+                            "type": "output_text",
+                            "text": joke_result
                         })
                     except json.JSONDecodeError:
                         pass

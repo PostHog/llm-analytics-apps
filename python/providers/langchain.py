@@ -48,15 +48,28 @@ class LangChainProvider(BaseProvider):
                 Weather information for the specified location
             """
             return self.get_weather(latitude, longitude, location_name)
-        
-        self.langchain_tools = [get_weather]
+
+        @tool
+        def tell_joke(setup: str, punchline: str) -> str:
+            """Tell a joke with a question-style setup and an answer punchline.
+
+            Args:
+                setup: The setup or question part of the joke
+                punchline: The punchline or answer part of the joke
+
+            Returns:
+                The formatted joke
+            """
+            return self.tell_joke(setup, punchline)
+
+        self.langchain_tools = [get_weather, tell_joke]
         self.tool_map = {tool.name: tool for tool in self.langchain_tools}
-        
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", SYSTEM_PROMPT_ASSISTANT),
             ("user", "{input}")
         ])
-        
+
         model = ChatOpenAI(openai_api_key=self.OPENAI_API_KEY, temperature=0)
         self.chain = prompt | model.bind_tools(self.langchain_tools)
     
@@ -125,13 +138,13 @@ class LangChainProvider(BaseProvider):
             for tool_call in response.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
-                
+
                 # Execute the tool
                 if tool_name in self.tool_map:
                     tool_result = self.tool_map[tool_name].invoke(tool_args)
-                    tool_result_text = self.format_tool_result("get_weather", tool_result)
+                    tool_result_text = self.format_tool_result(tool_name, tool_result)
                     display_parts.append(tool_result_text)
-                    
+
                     tool_messages.append(
                         ToolMessage(
                             content=str(tool_result),

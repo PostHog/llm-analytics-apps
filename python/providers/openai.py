@@ -50,6 +50,25 @@ class OpenAIProvider(BaseProvider):
                     },
                     "required": ["latitude", "longitude", "location_name"]
                 }
+            },
+            {
+                "type": "function",
+                "name": "tell_joke",
+                "description": "Tell a joke with a question-style setup and an answer punchline",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "setup": {
+                            "type": "string",
+                            "description": "The setup of the joke, typically a question (e.g., 'Why did the chicken cross the road?')"
+                        },
+                        "punchline": {
+                            "type": "string",
+                            "description": "The punchline or answer to the joke (e.g., 'To get to the other side!')"
+                        }
+                    },
+                    "required": ["setup", "punchline"]
+                }
             }
         ]
     
@@ -131,7 +150,7 @@ class OpenAIProvider(BaseProvider):
                             })
 
                 # Handle tool calls (separate output items in Responses API)
-                if hasattr(output_item, 'name') and output_item.name == "get_weather":
+                if hasattr(output_item, 'name'):
                     # Get the tool call details from the response
                     call_id = getattr(output_item, 'call_id', f"call_{output_item.name}")
                     tool_arguments = getattr(output_item, 'arguments', '{}')
@@ -143,19 +162,33 @@ class OpenAIProvider(BaseProvider):
                     except json.JSONDecodeError:
                         arguments = {}
 
-                    latitude = arguments.get("latitude", 0.0)
-                    longitude = arguments.get("longitude", 0.0)
-                    location_name = arguments.get("location_name")
-                    weather_result = self.get_weather(latitude, longitude, location_name)
-                    tool_result_text = self.format_tool_result("get_weather", weather_result)
-                    display_parts.append(tool_result_text)
+                    if output_item.name == "get_weather":
+                        latitude = arguments.get("latitude", 0.0)
+                        longitude = arguments.get("longitude", 0.0)
+                        location_name = arguments.get("location_name")
+                        weather_result = self.get_weather(latitude, longitude, location_name)
+                        tool_result_text = self.format_tool_result("get_weather", weather_result)
+                        display_parts.append(tool_result_text)
 
-                    # Store tool call info to add to conversation history
-                    tool_call_for_history = {
-                        "id": call_id,
-                        "name": output_item.name,
-                        "result": weather_result
-                    }
+                        # Store tool call info to add to conversation history
+                        tool_call_for_history = {
+                            "id": call_id,
+                            "name": output_item.name,
+                            "result": weather_result
+                        }
+                    elif output_item.name == "tell_joke":
+                        setup = arguments.get("setup", "")
+                        punchline = arguments.get("punchline", "")
+                        joke_result = self.tell_joke(setup, punchline)
+                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                        display_parts.append(tool_result_text)
+
+                        # Store tool call info to add to conversation history
+                        tool_call_for_history = {
+                            "id": call_id,
+                            "name": output_item.name,
+                            "result": joke_result
+                        }
 
         # Add messages to conversation history
         # For client-side history management (not using previous_response_id),
