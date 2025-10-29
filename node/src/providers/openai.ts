@@ -38,6 +38,25 @@ export class OpenAIProvider extends BaseProvider {
           },
           required: ['latitude', 'longitude', 'location_name']
         }
+      },
+      {
+        type: 'function',
+        name: 'tell_joke',
+        description: 'Tell a joke with a question-style setup and an answer punchline',
+        parameters: {
+          type: 'object',
+          properties: {
+            setup: {
+              type: 'string',
+              description: 'The setup of the joke, usually in question form'
+            },
+            punchline: {
+              type: 'string',
+              description: 'The punchline or answer to the joke'
+            }
+          },
+          required: ['setup', 'punchline']
+        }
       }
     ];
   }
@@ -146,6 +165,31 @@ export class OpenAIProvider extends BaseProvider {
             id: callId,
             name: outputItem.name,
             result: weatherResult
+          };
+        } else if (outputItem.name === 'tell_joke') {
+          // Get the tool call details from the response
+          const callId = outputItem.call_id || `call_${outputItem.name}`;
+          const toolArguments = outputItem.arguments || '{}';
+
+          // Parse arguments to execute the tool
+          let args: any = {};
+          try {
+            args = JSON.parse(toolArguments);
+          } catch (e) {
+            args = {};
+          }
+
+          const setup = args.setup || '';
+          const punchline = args.punchline || '';
+          const jokeResult = this.tellJoke(setup, punchline);
+          const toolResultText = this.formatToolResult('tell_joke', jokeResult);
+          displayParts.push(toolResultText);
+
+          // Store tool call info to add to conversation history
+          toolCallForHistory = {
+            id: callId,
+            name: outputItem.name,
+            result: jokeResult
           };
         }
       }

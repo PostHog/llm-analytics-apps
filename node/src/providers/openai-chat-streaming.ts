@@ -50,6 +50,27 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
             required: ['latitude', 'longitude', 'location_name']
           }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'tell_joke',
+          description: 'Tell a joke with a question-style setup and an answer punchline',
+          parameters: {
+            type: 'object',
+            properties: {
+              setup: {
+                type: 'string',
+                description: 'The setup of the joke, usually in question form'
+              },
+              punchline: {
+                type: 'string',
+                description: 'The punchline or answer to the joke'
+              }
+            },
+            required: ['setup', 'punchline']
+          }
+        }
       }
     ];
   }
@@ -173,7 +194,7 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
         
         for (const toolCall of completedToolCalls) {
           toolCalls.push(toolCall);
-          
+
           if (toolCall.function.name === 'get_weather') {
             try {
               const args = JSON.parse(toolCall.function.arguments);
@@ -182,6 +203,17 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
               const locationName = args.location_name;
               const weatherResult = await this.getWeather(latitude, longitude, locationName);
               const toolResultText = this.formatToolResult('get_weather', weatherResult);
+              yield '\n\n' + toolResultText;
+            } catch (e) {
+              console.error('Error parsing tool arguments:', e);
+            }
+          } else if (toolCall.function.name === 'tell_joke') {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              const setup = args.setup || '';
+              const punchline = args.punchline || '';
+              const jokeResult = this.tellJoke(setup, punchline);
+              const toolResultText = this.formatToolResult('tell_joke', jokeResult);
               yield '\n\n' + toolResultText;
             } catch (e) {
               console.error('Error parsing tool arguments:', e);
@@ -225,6 +257,22 @@ export class OpenAIChatStreamingProvider extends StreamingProvider {
             role: 'tool',
             tool_call_id: toolCall.id,
             content: weatherResult
+          };
+          this.messages.push(toolResultMessage);
+        } catch (e) {
+          console.error('Error adding tool result:', e);
+        }
+      } else if (toolCall.function.name === 'tell_joke') {
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          const setup = args.setup || '';
+          const punchline = args.punchline || '';
+          const jokeResult = this.tellJoke(setup, punchline);
+
+          const toolResultMessage: any = {
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: jokeResult
           };
           this.messages.push(toolResultMessage);
         } catch (e) {

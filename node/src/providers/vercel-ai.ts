@@ -86,6 +86,16 @@ export class VercelAIProvider extends BaseProvider {
             execute: async ({ latitude, longitude, location_name }: { latitude: number; longitude: number; location_name: string }) => {
               return this.getWeather(latitude, longitude, location_name);
             }
+          },
+          tell_joke: {
+            description: 'Tell a joke with a question-style setup and an answer punchline',
+            inputSchema: z.object({
+              setup: z.string().describe('The setup of the joke, usually in question form'),
+              punchline: z.string().describe('The punchline or answer to the joke')
+            }),
+            execute: async ({ setup, punchline }: { setup: string; punchline: string }) => {
+              return this.tellJoke(setup, punchline);
+            }
           }
         }
       };
@@ -107,7 +117,17 @@ export class VercelAIProvider extends BaseProvider {
           if (result.toolName === 'get_weather' && 'output' in result) {
             const toolResultText = this.formatToolResult('get_weather', result.output as string);
             displayParts.push(toolResultText);
-            
+
+            // Add tool result to message history
+            const toolMessage: Message = {
+              role: 'assistant',
+              content: toolResultText
+            };
+            this.messages.push(toolMessage);
+          } else if (result.toolName === 'tell_joke' && 'output' in result) {
+            const toolResultText = this.formatToolResult('tell_joke', result.output as string);
+            displayParts.push(toolResultText);
+
             // Add tool result to message history
             const toolMessage: Message = {
               role: 'assistant',

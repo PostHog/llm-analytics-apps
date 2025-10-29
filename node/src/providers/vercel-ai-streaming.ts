@@ -87,6 +87,16 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             execute: async ({ latitude, longitude, location_name }: { latitude: number; longitude: number; location_name: string }) => {
               return this.getWeather(latitude, longitude, location_name);
             }
+          },
+          tell_joke: {
+            description: 'Tell a joke with a question-style setup and an answer punchline',
+            inputSchema: z.object({
+              setup: z.string().describe('The setup of the joke, usually in question form'),
+              punchline: z.string().describe('The punchline or answer to the joke')
+            }),
+            execute: async ({ setup, punchline }: { setup: string; punchline: string }) => {
+              return this.tellJoke(setup, punchline);
+            }
           }
         }
       };
@@ -127,6 +137,12 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             const weatherResult = toolResult.output as string;
             const toolResultText = this.formatToolResult('get_weather', weatherResult);
             yield '\n\n' + toolResultText;
+          } else if (toolResult.toolName === 'tell_joke') {
+            // The tool was already executed via the execute function
+            // Format and yield the result
+            const jokeResult = toolResult.output as string;
+            const toolResultText = this.formatToolResult('tell_joke', jokeResult);
+            yield '\n\n' + toolResultText;
           }
         }
 
@@ -154,6 +170,11 @@ export class VercelAIStreamingProvider extends StreamingProvider {
             const locationName = toolCall.args.location_name;
             const weatherResult = await this.getWeather(latitude, longitude, locationName);
             toolResultsText += this.formatToolResult('get_weather', weatherResult);
+          } else if (toolCall.toolName === 'tell_joke') {
+            const setup = toolCall.args.setup || '';
+            const punchline = toolCall.args.punchline || '';
+            const jokeResult = this.tellJoke(setup, punchline);
+            toolResultsText += this.formatToolResult('tell_joke', jokeResult);
           }
         }
 

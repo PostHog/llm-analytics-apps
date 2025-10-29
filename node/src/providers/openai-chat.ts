@@ -57,6 +57,27 @@ export class OpenAIChatProvider extends BaseProvider {
             required: ['latitude', 'longitude', 'location_name']
           }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'tell_joke',
+          description: 'Tell a joke with a question-style setup and an answer punchline',
+          parameters: {
+            type: 'object',
+            properties: {
+              setup: {
+                type: 'string',
+                description: 'The setup of the joke, usually in question form'
+              },
+              punchline: {
+                type: 'string',
+                description: 'The punchline or answer to the joke'
+              }
+            },
+            required: ['setup', 'punchline']
+          }
+        }
       }
     ];
   }
@@ -162,6 +183,39 @@ export class OpenAIChatProvider extends BaseProvider {
               role: 'tool',
               tool_call_id: toolCall.id,
               content: weatherResult
+            } as any);
+
+          } catch (e) {
+            displayParts.push('❌ Error parsing tool arguments');
+          }
+        } else if (toolCall.function.name === 'tell_joke') {
+          try {
+            const args = JSON.parse(toolCall.function.arguments);
+            const setup = args.setup || '';
+            const punchline = args.punchline || '';
+            const jokeResult = this.tellJoke(setup, punchline);
+            const toolResultText = this.formatToolResult('tell_joke', jokeResult);
+            displayParts.push(toolResultText);
+
+            this.messages.push({
+              role: 'assistant',
+              content: assistantContent,
+              tool_calls: [
+                {
+                  id: toolCall.id,
+                  type: 'function',
+                  function: {
+                    name: toolCall.function.name,
+                    arguments: toolCall.function.arguments
+                  }
+                }
+              ]
+            });
+
+            this.messages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: jokeResult
             } as any);
 
           } catch (e) {

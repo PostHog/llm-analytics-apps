@@ -50,8 +50,21 @@ export class LangChainProvider extends BaseProvider {
       }
     } as any) as any;
 
-    this.langchainTools = [getWeatherTool];
+    const tellJokeTool = new DynamicStructuredTool({
+      name: 'tell_joke',
+      description: 'Tell a joke with a question-style setup and an answer punchline',
+      schema: z.object({
+        setup: z.string().describe('The setup of the joke, usually in question form'),
+        punchline: z.string().describe('The punchline or answer to the joke'),
+      }),
+      func: async (input: { setup: string; punchline: string }) => {
+        return this.tellJoke(input.setup, input.punchline);
+      }
+    } as any) as any;
+
+    this.langchainTools = [getWeatherTool, tellJokeTool];
     this.toolMap.set('get_weather', getWeatherTool);
+    this.toolMap.set('tell_joke', tellJokeTool);
 
     const prompt = ChatPromptTemplate.fromMessages([
       ['system', SYSTEM_PROMPT_ASSISTANT],
@@ -134,7 +147,7 @@ export class LangChainProvider extends BaseProvider {
 
         if (this.toolMap.has(toolName)) {
           const toolResult = await this.toolMap.get(toolName)!.invoke(toolArgs);
-          const toolResultText = this.formatToolResult('get_weather', toolResult);
+          const toolResultText = this.formatToolResult(toolName, toolResult);
           displayParts.push(toolResultText);
 
           toolMessages.push(
