@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather
+.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
 
 run-python:
 	@cd python && ./run.sh
@@ -34,4 +34,10 @@ python-install-local:
 ## Test Python weather tool functionality
 test-python-weather:
 	@cd python && ./scripts/run_test.sh
+
+## Ingest a trace JSON file into local PostHog for testing
+# Usage: make ingest-trace [FILE=path/to/trace.json]
+# If FILE not specified, uses example.json
+ingest-trace:
+	@./ingest_trace.sh $(FILE)
 

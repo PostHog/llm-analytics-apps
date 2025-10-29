@@ -22,10 +22,10 @@ class GeminiStreamingProvider(StreamingProvider):
         )
         # Store conversation history in Gemini's native format
         self.history = []
-        
+
         # Configure tools using proper Google GenAI types
-        weather_function = self.get_tool_definitions()[0]
-        self.tools = types.Tool(function_declarations=[weather_function])
+        tool_definitions = self.get_tool_definitions()
+        self.tools = types.Tool(function_declarations=tool_definitions)
         self.config = types.GenerateContentConfig(tools=[self.tools])
     
     def get_name(self):
@@ -54,6 +54,24 @@ class GeminiStreamingProvider(StreamingProvider):
                         },
                     },
                     "required": ["latitude", "longitude", "location_name"],
+                },
+            },
+            {
+                "name": "tell_joke",
+                "description": "Tell a joke with a question-style setup and an answer punchline",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "setup": {
+                            "type": "string",
+                            "description": "The setup of the joke, typically a question (e.g., 'Why did the chicken cross the road?')",
+                        },
+                        "punchline": {
+                            "type": "string",
+                            "description": "The punchline or answer to the joke (e.g., 'To get to the other side!')",
+                        },
+                    },
+                    "required": ["setup", "punchline"],
                 },
             }
         ]
@@ -122,7 +140,7 @@ class GeminiStreamingProvider(StreamingProvider):
                                 elif hasattr(part, 'function_call') and part.function_call:
                                     # Handle function calls during streaming
                                     function_call = part.function_call
-                                    
+
                                     if function_call.name == "get_current_weather":
                                         latitude = function_call.args.get("latitude", 0.0)
                                         longitude = function_call.args.get("longitude", 0.0)
@@ -130,10 +148,22 @@ class GeminiStreamingProvider(StreamingProvider):
                                         weather_result = self.get_weather(latitude, longitude, location_name)
                                         tool_result_text = self.format_tool_result("get_weather", weather_result)
                                         tool_results.append(tool_result_text)
-                                        
+
                                         # Yield the tool result to the stream
                                         yield "\n\n" + tool_result_text
-                                        
+
+                                        # Track the function call for history
+                                        model_parts.append({"function_call": function_call})
+                                    elif function_call.name == "tell_joke":
+                                        setup = function_call.args.get("setup", "")
+                                        punchline = function_call.args.get("punchline", "")
+                                        joke_result = self.tell_joke(setup, punchline)
+                                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                                        tool_results.append(tool_result_text)
+
+                                        # Yield the tool result to the stream
+                                        yield "\n\n" + tool_result_text
+
                                         # Track the function call for history
                                         model_parts.append({"function_call": function_call})
         except Exception as e:

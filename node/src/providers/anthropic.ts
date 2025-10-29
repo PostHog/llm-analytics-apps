@@ -48,6 +48,24 @@ export class AnthropicProvider extends BaseProvider {
           required: ["latitude", "longitude", "location_name"],
         },
       },
+      {
+        name: "tell_joke",
+        description: "Tell a joke with a question-style setup and an answer punchline",
+        input_schema: {
+          type: "object",
+          properties: {
+            setup: {
+              type: "string",
+              description: "The setup of the joke, usually in question form",
+            },
+            punchline: {
+              type: "string",
+              description: "The punchline or answer to the joke",
+            },
+          },
+          required: ["setup", "punchline"],
+        },
+      },
     ];
   }
 
@@ -140,6 +158,16 @@ export class AnthropicProvider extends BaseProvider {
             const toolResultText = this.formatToolResult(
               "get_weather",
               weatherResult,
+            );
+            toolResults.push(toolResultText);
+            displayParts.push(toolResultText);
+          } else if (toolName === "tell_joke") {
+            const setup = toolInput.setup || "";
+            const punchline = toolInput.punchline || "";
+            const jokeResult = this.tellJoke(setup, punchline);
+            const toolResultText = this.formatToolResult(
+              "tell_joke",
+              jokeResult,
             );
             toolResults.push(toolResultText);
             displayParts.push(toolResultText);

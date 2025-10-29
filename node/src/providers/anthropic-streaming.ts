@@ -48,6 +48,24 @@ export class AnthropicStreamingProvider extends StreamingProvider {
           required: ["latitude", "longitude", "location_name"],
         },
       },
+      {
+        name: "tell_joke",
+        description: "Tell a joke with a question-style setup and an answer punchline",
+        input_schema: {
+          type: "object",
+          properties: {
+            setup: {
+              type: "string",
+              description: "The setup of the joke, usually in question form",
+            },
+            punchline: {
+              type: "string",
+              description: "The punchline or answer to the joke",
+            },
+          },
+          required: ["setup", "punchline"],
+        },
+      },
     ];
   }
 
@@ -236,6 +254,15 @@ export class AnthropicStreamingProvider extends StreamingProvider {
                   weatherResult,
                 );
                 yield "\n\n" + toolResultText;
+              } else if (lastTool.name === "tell_joke") {
+                const setup = lastTool.input.setup || "";
+                const punchline = lastTool.input.punchline || "";
+                const jokeResult = this.tellJoke(setup, punchline);
+                const toolResultText = this.formatToolResult(
+                  "tell_joke",
+                  jokeResult,
+                );
+                yield "\n\n" + toolResultText;
               }
             } catch (e) {
               console.error("Error parsing tool input:", e);
@@ -276,6 +303,22 @@ export class AnthropicStreamingProvider extends StreamingProvider {
               type: "tool_result",
               tool_use_id: tool.id,
               content: weatherResult,
+            },
+          ],
+        };
+        this.messages.push(toolResultMessage);
+      } else if (tool.name === "tell_joke") {
+        const setup = tool.input.setup || "";
+        const punchline = tool.input.punchline || "";
+        const jokeResult = this.tellJoke(setup, punchline);
+
+        const toolResultMessage: Message = {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: tool.id,
+              content: jokeResult,
             },
           ],
         };

@@ -38,6 +38,25 @@ export class OpenAIStreamingProvider extends StreamingProvider {
           },
           required: ['latitude', 'longitude', 'location_name']
         }
+      },
+      {
+        type: 'function',
+        name: 'tell_joke',
+        description: 'Tell a joke with a question-style setup and an answer punchline',
+        parameters: {
+          type: 'object',
+          properties: {
+            setup: {
+              type: 'string',
+              description: 'The setup of the joke, usually in question form'
+            },
+            punchline: {
+              type: 'string',
+              description: 'The punchline or answer to the joke'
+            }
+          },
+          required: ['setup', 'punchline']
+        }
       }
     ];
   }
@@ -151,7 +170,23 @@ export class OpenAIStreamingProvider extends StreamingProvider {
             const weatherResult = await this.getWeather(latitude, longitude, locationName);
             const toolResultText = this.formatToolResult('get_weather', weatherResult);
             yield '\n\n' + toolResultText;
-            
+
+            // Update the arguments
+            toolCall.arguments = chunk.arguments;
+          } else if (toolCall && toolCall.name === 'tell_joke') {
+            let args: any = {};
+            try {
+              args = JSON.parse(chunk.arguments);
+            } catch (e) {
+              args = {};
+            }
+
+            const setup = args.setup || '';
+            const punchline = args.punchline || '';
+            const jokeResult = this.tellJoke(setup, punchline);
+            const toolResultText = this.formatToolResult('tell_joke', jokeResult);
+            yield '\n\n' + toolResultText;
+
             // Update the arguments
             toolCall.arguments = chunk.arguments;
           }
@@ -209,6 +244,23 @@ export class OpenAIStreamingProvider extends StreamingProvider {
           assistantContentItems.push({
             type: 'output_text',
             text: weatherResult
+          });
+        } else if (toolCall.arguments && toolCall.name === 'tell_joke') {
+          let args: any = {};
+          try {
+            args = JSON.parse(toolCall.arguments);
+          } catch (e) {
+            args = {};
+          }
+          const setup = args.setup || '';
+          const punchline = args.punchline || '';
+          const jokeResult = this.tellJoke(setup, punchline);
+
+          // Add tool result as output_text for conversation history
+          // For client-side history management, add as assistant message with output_text
+          assistantContentItems.push({
+            type: 'output_text',
+            text: jokeResult
           });
         }
       }

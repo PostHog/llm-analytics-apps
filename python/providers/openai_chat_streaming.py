@@ -63,6 +63,27 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                         "required": ["latitude", "longitude", "location_name"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "tell_joke",
+                    "description": "Tell a joke with a question-style setup and an answer punchline",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "setup": {
+                                "type": "string",
+                                "description": "The setup or question part of the joke"
+                            },
+                            "punchline": {
+                                "type": "string",
+                                "description": "The punchline or answer part of the joke"
+                            }
+                        },
+                        "required": ["setup", "punchline"]
+                    }
+                }
             }
         ]
     
@@ -184,7 +205,7 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                         
                         for tool_call in completed_tool_calls:
                             tool_calls.append(tool_call)
-                            
+
                             if tool_call["function"]["name"] == "get_weather":
                                 try:
                                     args = json.loads(tool_call["function"]["arguments"])
@@ -193,6 +214,16 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                                     location_name = args.get("location_name")
                                     weather_result = self.get_weather(latitude, longitude, location_name)
                                     tool_result_text = self.format_tool_result("get_weather", weather_result)
+                                    yield "\n\n" + tool_result_text
+                                except json.JSONDecodeError as e:
+                                    print(f"Error parsing tool arguments: {e}")
+                            elif tool_call["function"]["name"] == "tell_joke":
+                                try:
+                                    args = json.loads(tool_call["function"]["arguments"])
+                                    setup = args.get("setup", "")
+                                    punchline = args.get("punchline", "")
+                                    joke_result = self.tell_joke(setup, punchline)
+                                    tool_result_text = self.format_tool_result("tell_joke", joke_result)
                                     yield "\n\n" + tool_result_text
                                 except json.JSONDecodeError as e:
                                     print(f"Error parsing tool arguments: {e}")
@@ -234,6 +265,21 @@ class OpenAIChatStreamingProvider(StreamingProvider):
                         "role": "tool",
                         "tool_call_id": tool_call["id"],
                         "content": weather_result
+                    }
+                    self.messages.append(tool_result_message)
+                except json.JSONDecodeError:
+                    pass
+            elif tool_call["function"]["name"] == "tell_joke":
+                try:
+                    args = json.loads(tool_call["function"]["arguments"])
+                    setup = args.get("setup", "")
+                    punchline = args.get("punchline", "")
+                    joke_result = self.tell_joke(setup, punchline)
+
+                    tool_result_message = {
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": joke_result
                     }
                     self.messages.append(tool_result_message)
                 except json.JSONDecodeError:

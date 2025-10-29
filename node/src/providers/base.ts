@@ -143,9 +143,15 @@ export abstract class BaseProvider {
     }
   }
 
+  protected tellJoke(setup: string, punchline: string): string {
+    return `${setup}\n\n${punchline}`;
+  }
+
   protected formatToolResult(toolName: string, result: string): string {
     if (toolName === "get_weather") {
       return `🌤️  Weather: ${result}`;
+    } else if (toolName === "tell_joke") {
+      return `😂 Joke: ${result}`;
     }
 
     return result;

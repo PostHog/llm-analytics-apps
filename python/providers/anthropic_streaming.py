@@ -51,6 +51,24 @@ class AnthropicStreamingProvider(StreamingProvider):
                     },
                     "required": ["latitude", "longitude", "location_name"]
                 }
+            },
+            {
+                "name": "tell_joke",
+                "description": "Tell a joke with a question-style setup and an answer punchline",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "setup": {
+                            "type": "string",
+                            "description": "The setup of the joke, typically a question (e.g., 'Why did the chicken cross the road?')"
+                        },
+                        "punchline": {
+                            "type": "string",
+                            "description": "The punchline or answer to the joke (e.g., 'To get to the other side!')"
+                        }
+                    },
+                    "required": ["setup", "punchline"]
+                }
             }
         ]
     
@@ -221,6 +239,12 @@ class AnthropicStreamingProvider(StreamingProvider):
                                 weather_result = self.get_weather(latitude, longitude, location_name)
                                 tool_result_text = self.format_tool_result("get_weather", weather_result)
                                 yield "\n\n" + tool_result_text
+                            elif last_tool["name"] == "tell_joke":
+                                setup = last_tool["input"].get("setup", "")
+                                punchline = last_tool["input"].get("punchline", "")
+                                joke_result = self.tell_joke(setup, punchline)
+                                tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                                yield "\n\n" + tool_result_text
                         except (json.JSONDecodeError, AttributeError):
                             pass
                 
@@ -260,7 +284,7 @@ class AnthropicStreamingProvider(StreamingProvider):
                 longitude = tool["input"].get("longitude", 0.0)
                 location_name = tool["input"].get("location_name")
                 weather_result = self.get_weather(latitude, longitude, location_name)
-                
+
                 tool_result_message = {
                     "role": "user",
                     "content": [
@@ -268,6 +292,22 @@ class AnthropicStreamingProvider(StreamingProvider):
                             "type": "tool_result",
                             "tool_use_id": tool.get("id"),
                             "content": weather_result
+                        }
+                    ]
+                }
+                self.messages.append(tool_result_message)
+            elif tool.get("name") == "tell_joke" and tool.get("input"):
+                setup = tool["input"].get("setup", "")
+                punchline = tool["input"].get("punchline", "")
+                joke_result = self.tell_joke(setup, punchline)
+
+                tool_result_message = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tool.get("id"),
+                            "content": joke_result
                         }
                     ]
                 }

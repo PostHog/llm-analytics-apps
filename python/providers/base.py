@@ -120,11 +120,17 @@ class BaseProvider(ABC):
         except (KeyError, ValueError, TypeError) as e:
             location_str = location_name if location_name else f"coordinates ({latitude}, {longitude})"
             return f"Error parsing weather data for {location_str}: {str(e)}"
-        
+
+    def tell_joke(self, setup: str, punchline: str) -> str:
+        """Tell a joke with a setup and punchline"""
+        return f"{setup}\n\n{punchline}"
+
     def format_tool_result(self, tool_name: str, result: str) -> str:
         """Format tool result for display"""
         if tool_name == "get_weather":
             return f"🌤️  Weather: {result}"
+        elif tool_name == "tell_joke":
+            return f"😂 Joke: {result}"
         return result
 
     def _debug_log(self, title: str, data: Any, truncate: bool = True):

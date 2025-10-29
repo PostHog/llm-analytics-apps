@@ -47,8 +47,27 @@ export class GeminiStreamingProvider extends StreamingProvider {
       },
     };
 
+    const jokeFunction = {
+      name: 'tell_joke',
+      description: 'Tell a joke with a question-style setup and an answer punchline',
+      parameters: {
+        type: 'object',
+        properties: {
+          setup: {
+            type: 'string',
+            description: 'The setup of the joke, usually in question form',
+          },
+          punchline: {
+            type: 'string',
+            description: 'The punchline or answer to the joke',
+          },
+        },
+        required: ['setup', 'punchline'],
+      },
+    };
+
     return [{
-      functionDeclarations: [weatherFunction]
+      functionDeclarations: [weatherFunction, jokeFunction]
     }] as any;
   }
 
@@ -133,6 +152,18 @@ export class GeminiStreamingProvider extends StreamingProvider {
                   const locationName = functionCall.args?.location_name;
                   const weatherResult = await this.getWeather(latitude, longitude, locationName);
                   const toolResultText = this.formatToolResult('get_weather', weatherResult);
+                  toolResults.push(toolResultText);
+
+                  // Yield the tool result to the stream
+                  yield '\n\n' + toolResultText;
+
+                  // Track the function call for history
+                  modelParts.push({ functionCall });
+                } else if (functionCall.name === 'tell_joke') {
+                  const setup = functionCall.args?.setup || '';
+                  const punchline = functionCall.args?.punchline || '';
+                  const jokeResult = this.tellJoke(setup, punchline);
+                  const toolResultText = this.formatToolResult('tell_joke', jokeResult);
                   toolResults.push(toolResultText);
 
                   // Yield the tool result to the stream

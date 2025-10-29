@@ -62,6 +62,27 @@ class LiteLLMProvider(BaseProvider):
                         "required": ["latitude", "longitude", "location_name"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "tell_joke",
+                    "description": "Tell a joke with a question-style setup and an answer punchline",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "setup": {
+                                "type": "string",
+                                "description": "The setup or question part of the joke"
+                            },
+                            "punchline": {
+                                "type": "string",
+                                "description": "The punchline or answer part of the joke"
+                            }
+                        },
+                        "required": ["setup", "punchline"]
+                    }
+                }
             }
         ]
     
@@ -179,16 +200,34 @@ class LiteLLMProvider(BaseProvider):
                             weather_result = self.get_weather(latitude, longitude, location_name)
                             tool_result_text = self.format_tool_result("get_weather", weather_result)
                             display_parts.append(tool_result_text)
-                            
+
                             # Add tool result to message history
                             self.messages.append({
                                 "role": "tool",
                                 "tool_call_id": tool_call.id,
                                 "content": weather_result
                             })
-                            
+
                         except json.JSONDecodeError:
                             display_parts.append("❌ Error parsing weather tool arguments")
+                    elif tool_call.function.name == "tell_joke":
+                        try:
+                            arguments = json.loads(tool_call.function.arguments)
+                            setup = arguments.get("setup", "")
+                            punchline = arguments.get("punchline", "")
+                            joke_result = self.tell_joke(setup, punchline)
+                            tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                            display_parts.append(tool_result_text)
+
+                            # Add tool result to message history
+                            self.messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": joke_result
+                            })
+
+                        except json.JSONDecodeError:
+                            display_parts.append("❌ Error parsing joke tool arguments")
                 
                 # Get final response after tool execution
                 try:

@@ -49,6 +49,24 @@ class AnthropicProvider(BaseProvider):
                     },
                     "required": ["latitude", "longitude", "location_name"]
                 }
+            },
+            {
+                "name": "tell_joke",
+                "description": "Tell a joke with a question-style setup and an answer punchline",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "setup": {
+                            "type": "string",
+                            "description": "The setup of the joke, typically a question (e.g., 'Why did the chicken cross the road?')"
+                        },
+                        "punchline": {
+                            "type": "string",
+                            "description": "The punchline or answer to the joke (e.g., 'To get to the other side!')"
+                        }
+                    },
+                    "required": ["setup", "punchline"]
+                }
             }
         ]
     
@@ -126,13 +144,20 @@ class AnthropicProvider(BaseProvider):
                     # Execute the tool and prepare result for display and history
                     tool_name = content_block.name
                     tool_input = content_block.input
-                    
+
                     if tool_name == "get_weather":
                         latitude = tool_input.get("latitude", 0.0)
                         longitude = tool_input.get("longitude", 0.0)
                         location_name = tool_input.get("location_name")
                         weather_result = self.get_weather(latitude, longitude, location_name)
                         tool_result_text = self.format_tool_result("get_weather", weather_result)
+                        tool_results.append(tool_result_text)
+                        display_parts.append(tool_result_text)
+                    elif tool_name == "tell_joke":
+                        setup = tool_input.get("setup", "")
+                        punchline = tool_input.get("punchline", "")
+                        joke_result = self.tell_joke(setup, punchline)
+                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
                         tool_results.append(tool_result_text)
                         display_parts.append(tool_result_text)
                 elif content_block.type == "text":
