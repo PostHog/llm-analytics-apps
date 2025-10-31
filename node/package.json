@@ -21,18 +21,19 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.39",
     "@ai-sdk/openai": "^2.0.4",
     "@ai-sdk/provider-utils": "^3.0.1",
     "@anthropic-ai/sdk": "^0.27.0",
     "@google/genai": "^1.11.0",
     "@langchain/core": "^0.3.66",
     "@langchain/openai": "^0.3.14",
-    "@posthog/ai": "^6.4.3",
-    "ai": "^5.0.6",
+    "@posthog/ai": "^6.5.0",
+    "ai": "^5.0.42",
     "dotenv": "^16.4.5",
     "langchain": "^0.3.30",
     "openai": "^4.0.0",
-    "posthog-node": "^5.10.1",
+    "posthog-node": "^5.10.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {

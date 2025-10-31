@@ -17,6 +17,8 @@ import { OpenAIChatStreamingProvider } from './providers/openai-chat-streaming.j
 import { OpenAIStreamingProvider } from './providers/openai-streaming.js';
 import { VercelAIProvider } from './providers/vercel-ai.js';
 import { VercelAIStreamingProvider } from './providers/vercel-ai-streaming.js';
+import { VercelAIAnthropicProvider } from './providers/vercel-ai-anthropic.js';
+import { VercelAIAnthropicStreamingProvider } from './providers/vercel-ai-anthropic-streaming.js';
 import { VercelGenerateObjectProvider } from './providers/vercel-generate-object.js';
 import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js';
 
@@ -132,7 +134,9 @@ function displayProviders(mode?: string): Map<string, string> {
     ['10', 'Vercel AI SDK (OpenAI)'],
     ['11', 'Vercel AI SDK Streaming (OpenAI)'],
     ['12', 'Vercel generateObject (OpenAI)'],
-    ['13', 'Vercel streamObject (OpenAI)']
+    ['13', 'Vercel streamObject (OpenAI)'],
+    ['14', 'Vercel AI SDK (Anthropic)'],
+    ['15', 'Vercel AI SDK Streaming (Anthropic)']
   ]);
 
   // Filter providers for embeddings mode
@@ -168,7 +172,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-13)';
+      let prompt = '\nSelect a provider (1-15)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -176,10 +180,10 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
         prompt += ', or \'m\' to change mode';
       }
       prompt += ': ';
-      
+
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -258,6 +262,10 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelGenerateObjectProvider(posthog, aiSessionId);
     case '13':
       return new VercelStreamObjectProvider(posthog, aiSessionId);
+    case '14':
+      return new VercelAIAnthropicProvider(posthog, aiSessionId);
+    case '15':
+      return new VercelAIAnthropicStreamingProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
