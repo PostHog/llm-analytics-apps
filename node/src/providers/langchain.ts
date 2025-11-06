@@ -71,7 +71,7 @@ export class LangChainProvider extends BaseProvider {
       ['user', '{input}']
     ]);
 
-    const model = new ChatOpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0 });
+    const model = new ChatOpenAI({ openAIApiKey: process.env.OPENAI_API_KEY });
     prompt.pipe(model.bindTools(this.langchainTools));
   }
 
@@ -117,7 +117,6 @@ export class LangChainProvider extends BaseProvider {
 
     const model = new ChatOpenAI({
       openAIApiKey: process.env.OPENAI_API_KEY,
-      temperature: 0,
       modelName: base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL
     });
     const modelWithTools = model.bindTools(this.langchainTools);
