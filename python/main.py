@@ -19,6 +19,7 @@ from providers.openai_chat import OpenAIChatProvider
 from providers.openai_chat_streaming import OpenAIChatStreamingProvider
 from providers.openai_streaming import OpenAIStreamingProvider
 from providers.litellm_provider import LiteLLMProvider
+from providers.litellm_streaming import LiteLLMStreamingProvider
 
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -107,9 +108,10 @@ def display_providers(mode=None):
         "7": "OpenAI Responses Streaming",
         "8": "OpenAI Chat Completions",
         "9": "OpenAI Chat Completions Streaming",
-        "10": "LiteLLM (Unified)"
+        "10": "LiteLLM (Sync)",
+        "11": "LiteLLM (Async)"
     }
-    
+
     # Filter providers for embeddings mode
     if mode == "5":
         # Only OpenAI providers and LiteLLM support embeddings
@@ -118,7 +120,8 @@ def display_providers(mode=None):
             "7": "OpenAI Responses Streaming",
             "8": "OpenAI Chat Completions",
             "9": "OpenAI Chat Completions Streaming",
-            "10": "LiteLLM (Unified)"
+            "10": "LiteLLM (Sync)",
+            "11": "LiteLLM (Async)"
         }
     
     print("\nAvailable AI Providers:")
@@ -132,7 +135,7 @@ def display_providers(mode=None):
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
     
     # Build prompt based on valid choices
     if len(valid_choices) == 2:
@@ -140,7 +143,7 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-10)"
+        prompt = "\nSelect a provider (1-11)"
     
     if allow_all:
         prompt += ", 'a' for all providers"
@@ -219,6 +222,8 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return OpenAIChatStreamingProvider(posthog)
     elif choice == "10":
         return LiteLLMProvider(posthog)
+    elif choice == "11":
+        return LiteLLMStreamingProvider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -388,9 +393,10 @@ def run_all_tests(mode):
         ("7", "OpenAI Responses Streaming"),
         ("8", "OpenAI Chat Completions"),
         ("9", "OpenAI Chat Completions Streaming"),
-        ("10", "LiteLLM (Unified)")
+        ("10", "LiteLLM (Sync)"),
+        ("11", "LiteLLM (Async)")
     ]
-    
+
     # Filter providers for embeddings test (only those that support it)
     if mode == "5":
         # Only OpenAI providers and LiteLLM support embeddings
@@ -399,7 +405,8 @@ def run_all_tests(mode):
             ("7", "OpenAI Responses Streaming"),
             ("8", "OpenAI Chat Completions"),
             ("9", "OpenAI Chat Completions Streaming"),
-            ("10", "LiteLLM (Unified)")
+            ("10", "LiteLLM (Sync)"),
+            ("11", "LiteLLM (Async)")
         ]
     
     if mode == "2":
@@ -418,9 +425,9 @@ def run_all_tests(mode):
     print()
     
     results = []
-    
+
     for provider_id, provider_name in providers_info:
-        print(f"[{provider_id}/10] Testing {provider_name}...")
+        print(f"[{provider_id}/11] Testing {provider_name}...")
         
         try:
             # For automated tests, don't enable thinking by default
