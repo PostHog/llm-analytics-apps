@@ -45,7 +45,10 @@ export class OpenAITranscriptionProvider extends BaseProvider {
         file: audioFile,
         model: model,
         posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-        posthogProperties: this.getPostHogProperties()
+        posthogProperties: {
+          $ai_span_name: "openai_transcription",
+          ...this.getPostHogProperties(),
+        }
       };
 
       // Add optional parameters
@@ -89,7 +92,10 @@ export class OpenAITranscriptionProvider extends BaseProvider {
         model: model,
         response_format: 'verbose_json',
         posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-        posthogProperties: this.getPostHogProperties()
+        posthogProperties: {
+          $ai_span_name: "openai_transcription_verbose",
+          ...this.getPostHogProperties(),
+        }
       };
 
       // Add optional parameters
