@@ -15,6 +15,7 @@ import { OpenAIProvider } from './providers/openai.js';
 import { OpenAIChatProvider } from './providers/openai-chat.js';
 import { OpenAIChatStreamingProvider } from './providers/openai-chat-streaming.js';
 import { OpenAIStreamingProvider } from './providers/openai-streaming.js';
+import { OpenAITranscriptionProvider } from './providers/openai-transcription.js';
 import { VercelAIProvider } from './providers/vercel-ai.js';
 import { VercelAIStreamingProvider } from './providers/vercel-ai-streaming.js';
 import { VercelAIAnthropicProvider } from './providers/vercel-ai-anthropic.js';
@@ -78,7 +79,8 @@ async function selectMode(): Promise<string> {
     ['3', 'Message Test'],
     ['4', 'Image Test'],
     ['5', 'Embeddings Test'],
-    ['6', 'Structured Output Test (Vercel only)']
+    ['6', 'Structured Output Test (Vercel only)'],
+    ['7', 'Transcription Test (OpenAI only)']
   ]);
 
   console.log('\nSelect Mode:');
@@ -96,22 +98,24 @@ async function selectMode(): Promise<string> {
       console.log(`  ${key}. ${name} (Auto-test: Generate embeddings)`);
     } else if (key === '6') {
       console.log(`  ${key}. ${name} (Auto-test: Generate structured data)`);
+    } else if (key === '7') {
+      console.log(`  ${key}. ${name} (Auto-test: Transcribe audio)`);
     }
   }
   console.log('='.repeat(50));
 
   return new Promise((resolve) => {
     const askForMode = () => {
-      rl.question('\nSelect a mode (1-6) or \'q\' to quit: ', (choice) => {
+      rl.question('\nSelect a mode (1-7) or \'q\' to quit: ', (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (choice === 'q') {
           console.log('\n👋 Goodbye!');
           cleanup();
         } else {
-          console.log('❌ Invalid choice. Please select 1, 2, 3, 4, 5, or 6.');
+          console.log('❌ Invalid choice. Please select 1-7.');
           askForMode();
         }
       });
@@ -149,13 +153,21 @@ function displayProviders(mode?: string): Map<string, string> {
       ['9', 'OpenAI Chat Completions Streaming']
     ]);
   }
-  
+
   // Filter providers for structured output mode
   if (mode === '6') {
     // Only Vercel Object providers support structured output
     providers = new Map<string, string>([
       ['12', 'Vercel generateObject (OpenAI)'],
       ['13', 'Vercel streamObject (OpenAI)']
+    ]);
+  }
+
+  // Filter providers for transcription mode
+  if (mode === '7') {
+    // Only OpenAI Transcription provider supports audio transcription
+    providers = new Map<string, string>([
+      ['16', 'OpenAI Transcriptions']
     ]);
   }
 
@@ -172,7 +184,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-15)';
+      let prompt = '\nSelect a provider (1-16)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -183,7 +195,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -266,6 +278,8 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelAIAnthropicProvider(posthog, aiSessionId);
     case '15':
       return new VercelAIAnthropicStreamingProvider(posthog, aiSessionId);
+    case '16':
+      return new OpenAITranscriptionProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -461,23 +475,72 @@ async function runImageTest(provider: any): Promise<{ success: boolean; error: s
   // Create a simple test image (1x1 red pixel as base64)
   const base64Image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
   const testQuery = 'What do you see in this image? Please describe it.';
-  
+
   console.log(`\nImage Test: ${provider.getName()}`);
   console.log('-'.repeat(50));
   console.log(`Query: "${testQuery}"`);
   console.log(`Image: 1x1 red pixel (base64 encoded)`);
   console.log();
-  
+
   try {
     // Reset conversation for clean test
     provider.resetConversation();
-    
+
     // Send the test query with image
     const response = await provider.chat(testQuery, base64Image);
-    
+
     console.log(`Response: ${response}`);
     console.log();
     return { success: true, error: null };
+  } catch (error: any) {
+    logError(error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function runTranscriptionTest(provider: any): Promise<{ success: boolean; error: string | null }> {
+  const fs = await import('fs');
+  const path = await import('path');
+
+  console.log(`\nTranscription Test: ${provider.getName()}`);
+  console.log('-'.repeat(50));
+
+  // Check if provider supports transcription
+  if (!provider.transcribe || typeof provider.transcribe !== 'function') {
+    console.log(`❌ ${provider.getName()} does not support transcription`);
+    return { success: false, error: 'Provider does not support transcription' };
+  }
+
+  // Check for test audio file
+  const audioPath = path.join(__dirname, '..', '..', 'test-audio.mp3');
+
+  if (!fs.existsSync(audioPath)) {
+    console.log(`❌ Test audio file not found at: ${audioPath}`);
+    console.log('Please create a test audio file (test-audio.mp3) in the llm-analytics-apps directory');
+    console.log('You can use any short audio file (mp3, wav, m4a, etc.)');
+    return { success: false, error: 'Test audio file not found' };
+  }
+
+  try {
+    console.log(`\nTranscribing audio file: ${audioPath}`);
+    console.log();
+
+    // Transcribe the audio
+    const transcription = await provider.transcribe(audioPath);
+
+    if (transcription && transcription.length > 0) {
+      console.log(`✅ Transcription successful`);
+      console.log(`\nTranscription text:`);
+      console.log(`"${transcription}"`);
+      console.log();
+    } else {
+      console.log(`❌ Failed to transcribe audio`);
+      return { success: false, error: 'Failed to generate transcription' };
+    }
+
+    console.log();
+    return { success: true, error: null };
+
   } catch (error: any) {
     logError(error);
     return { success: false, error: error.message };
@@ -515,11 +578,12 @@ async function runAllTests(mode: string): Promise<void> {
     ];
   }
   
-  const testName = mode === '2' ? 'Tool Call Test' : 
-                   mode === '3' ? 'Message Test' : 
-                   mode === '4' ? 'Image Test' : 
+  const testName = mode === '2' ? 'Tool Call Test' :
+                   mode === '3' ? 'Message Test' :
+                   mode === '4' ? 'Image Test' :
                    mode === '5' ? 'Embeddings Test' :
-                   mode === '6' ? 'Structured Output Test' : 'Unknown Test';
+                   mode === '6' ? 'Structured Output Test' :
+                   mode === '7' ? 'Transcription Test' : 'Unknown Test';
   console.log(`\n🔄 Running ${testName} on all providers...`);
   console.log('='.repeat(60));
   console.log();
@@ -540,7 +604,7 @@ async function runAllTests(mode: string): Promise<void> {
       const provider = createProvider(providerId, false, undefined);
       
       // Run the appropriate test
-      const result = mode === '2' 
+      const result = mode === '2'
         ? await runToolCallTest(provider)
         : mode === '3'
         ? await runMessageTest(provider)
@@ -550,6 +614,8 @@ async function runAllTests(mode: string): Promise<void> {
         ? await runEmbeddingsTest(provider)
         : mode === '6'
         ? await runStructuredOutputTest(provider)
+        : mode === '7'
+        ? await runTranscriptionTest(provider)
         : { success: false, error: 'Unknown test mode' };
       
       results.push({
@@ -606,10 +672,10 @@ async function main(): Promise<void> {
   while (true) {
     // Display providers and get user choice
     displayProviders(mode);
-    
+
     // Allow mode change for all modes, 'all' option only for test modes
-    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6');
-    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6');
+    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7');
+    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7');
     const choice = await getProviderChoice(allowModeChange, allowAll);
     
     // Check if user wants to change mode
@@ -679,6 +745,12 @@ async function main(): Promise<void> {
     } else if (mode === '6') {
       // Structured Output Test - run test and loop back
       const result = await runStructuredOutputTest(provider);
+      if (!result.error) {
+        console.log();
+      }
+    } else if (mode === '7') {
+      // Transcription Test - run test and loop back
+      const result = await runTranscriptionTest(provider);
       if (!result.error) {
         console.log();
       }
