@@ -21,3 +21,19 @@ openai
 
 # LiteLLM
 litellm
+
+# LlamaIndex (for OpenTelemetry testing)
+llama-index
+llama-index-llms-openai
+
+# OpenTelemetry (for LlamaIndex tracing to PostHog)
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+
+# OpenInference (OpenTelemetry instrumentation for LlamaIndex)
+openinference-instrumentation-llama-index
+openinference-semantic-conventions
+
+# OpenAI instrumentation for OpenTelemetry
+opentelemetry-instrumentation-openai-v2

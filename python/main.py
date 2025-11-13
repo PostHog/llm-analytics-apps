@@ -5,6 +5,11 @@ Supports multiple LLM providers: Anthropic, Gemini, LangChain, and OpenAI
 """
 
 import os
+
+# CRITICAL: Set OpenAI instrumentation env vars BEFORE any imports
+# This must happen before opentelemetry or openai modules are loaded
+os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
+
 import platform
 import uuid
 from dotenv import load_dotenv
@@ -20,6 +25,8 @@ from providers.openai_chat_streaming import OpenAIChatStreamingProvider
 from providers.openai_streaming import OpenAIStreamingProvider
 from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
+from providers.llamaindex_agent import LlamaIndexAgentProvider
+from providers.openai_otel import OpenAIOtelProvider
 
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -63,9 +70,10 @@ def select_mode():
         "2": "Tool Call Test",
         "3": "Message Test",
         "4": "Image Test",
-        "5": "Embeddings Test"
+        "5": "Embeddings Test",
+        "6": "Agent Test"
     }
-    
+
     print("\nSelect Mode:")
     print("=" * 50)
     for key, name in modes.items():
@@ -79,19 +87,21 @@ def select_mode():
             print(f"  {key}. {name} (Auto-test: Describe image)")
         elif key == "5":
             print(f"  {key}. {name} (Auto-test: Generate embeddings)")
+        elif key == "6":
+            print(f"  {key}. {name} (Auto-test: LlamaIndex ReAct agent)")
     print("=" * 50)
-    
+
     while True:
         try:
-            choice = input("\nSelect a mode (1-5) or 'q' to quit: ").strip().lower()
-            if choice in ["1", "2", "3", "4", "5"]:
+            choice = input("\nSelect a mode (1-6) or 'q' to quit: ").strip().lower()
+            if choice in ["1", "2", "3", "4", "5", "6"]:
                 clear_screen()
                 return choice
             elif choice == "q":
                 print("\n👋 Goodbye!")
                 exit(0)
             else:
-                print("❌ Invalid choice. Please select 1, 2, 3, 4, or 5.")
+                print("❌ Invalid choice. Please select 1-6.")
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
             exit(0)
@@ -109,7 +119,9 @@ def display_providers(mode=None):
         "8": "OpenAI Chat Completions",
         "9": "OpenAI Chat Completions Streaming",
         "10": "LiteLLM (Sync)",
-        "11": "LiteLLM (Async)"
+        "11": "LiteLLM (Async)",
+        "12": "LlamaIndex Agent (OpenTelemetry)",
+        "13": "OpenAI Chat (OpenTelemetry)"
     }
 
     # Filter providers for embeddings mode
@@ -123,34 +135,41 @@ def display_providers(mode=None):
             "10": "LiteLLM (Sync)",
             "11": "LiteLLM (Async)"
         }
-    
+    elif mode == "6":
+        # Only LlamaIndex agent for agent mode
+        providers = {
+            "12": "LlamaIndex Agent (OpenTelemetry)"
+        }
+
     print("\nAvailable AI Providers:")
     print("=" * 50)
     for key, name in providers.items():
         print(f"  {key}. {name}")
     print("=" * 50)
-    
+
     return providers
 
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
-    
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
+
     # Build prompt based on valid choices
-    if len(valid_choices) == 2:
+    if len(valid_choices) == 1:
+        prompt = f"\nSelect a provider ({valid_choices[0]})"
+    elif len(valid_choices) == 2:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[1]})"
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-11)"
-    
+        prompt = "\nSelect a provider (1-13)"
+
     if allow_all:
         prompt += ", 'a' for all providers"
     if allow_mode_change:
         prompt += ", or 'm' to change mode"
     prompt += ": "
-    
+
     while True:
         try:
             choice = input(prompt).strip().lower()
@@ -224,6 +243,10 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return LiteLLMProvider(posthog)
     elif choice == "11":
         return LiteLLMStreamingProvider(posthog)
+    elif choice == "12":
+        return LlamaIndexAgentProvider(posthog)
+    elif choice == "13":
+        return OpenAIOtelProvider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -350,22 +373,22 @@ def run_embeddings_test(provider):
     test_texts = [
         "The quick brown fox jumps over the lazy dog."
     ]
-    
+
     print(f'\nEmbeddings Test: {provider.get_name()}')
     print('-' * 50)
-    
+
     # Check if provider supports embeddings
     if not hasattr(provider, 'embed'):
         print(f'❌ {provider.get_name()} does not support embeddings')
         return False, "Provider does not support embeddings"
-    
+
     try:
         for i, text in enumerate(test_texts, 1):
             print(f'\nTest {i}: "{text}"')
-            
+
             # Generate embeddings
             embedding = provider.embed(text)
-            
+
             if embedding:
                 print(f'✅ Generated embedding with {len(embedding)} dimensions')
                 # Show first 5 values as sample
@@ -373,10 +396,41 @@ def run_embeddings_test(provider):
             else:
                 print(f'❌ Failed to generate embedding')
                 return False, f"Failed to generate embedding for text {i}"
-        
+
         print()
         return True, None
-        
+
+    except Exception as error:
+        print(f'❌ Error: {str(error)}')
+        return False, str(error)
+
+def run_agent_test(provider):
+    """Run automated agent test with multi-step reasoning"""
+    test_queries = [
+        "What is 20 multiplied by 4? Then add 15 to the result.",
+        "Tell me a joke about programming, then what's the weather in San Francisco?",
+    ]
+
+    print(f'\nAgent Test: {provider.get_name()}')
+    print('-' * 50)
+
+    try:
+        # Reset conversation for clean test
+        provider.reset_conversation()
+
+        for i, query in enumerate(test_queries, 1):
+            print(f'\n🤖 Test {i}: "{query}"')
+            print('-' * 50)
+
+            # Send the test query
+            response = provider.chat(query)
+
+            print(f'\n✅ Response:\n{response}')
+            print('-' * 50)
+
+        print()
+        return True, None
+
     except Exception as error:
         print(f'❌ Error: {str(error)}')
         return False, str(error)
@@ -408,7 +462,12 @@ def run_all_tests(mode):
             ("10", "LiteLLM (Sync)"),
             ("11", "LiteLLM (Async)")
         ]
-    
+    elif mode == "6":
+        # Only LlamaIndex agent for agent test
+        providers_info = [
+            ("12", "LlamaIndex Agent (OpenTelemetry)")
+        ]
+
     if mode == "2":
         test_name = "Tool Call Test"
     elif mode == "3":
@@ -417,6 +476,8 @@ def run_all_tests(mode):
         test_name = "Image Test"
     elif mode == "5":
         test_name = "Embeddings Test"
+    elif mode == "6":
+        test_name = "Agent Test"
     else:
         test_name = "Unknown Test"
     
@@ -442,6 +503,8 @@ def run_all_tests(mode):
                 success, error = run_image_test(provider)
             elif mode == "5":
                 success, error = run_embeddings_test(provider)
+            elif mode == "6":
+                success, error = run_agent_test(provider)
             else:
                 success, error = False, "Unknown test mode"
             
@@ -496,8 +559,8 @@ def main():
         providers = display_providers(mode)
         
         # Allow mode change for all modes, 'all' option only for test modes
-        allow_mode_change = (mode in ["1", "2", "3", "4", "5"])
-        allow_all = (mode in ["2", "3", "4", "5"])
+        allow_mode_change = (mode in ["1", "2", "3", "4", "5", "6"])
+        allow_all = (mode in ["2", "3", "4", "5", "6"])
         valid_choices = list(providers.keys())
         choice = get_provider_choice(allow_mode_change=allow_mode_change, allow_all=allow_all, valid_choices=valid_choices)
         
@@ -526,6 +589,8 @@ def main():
             print(status_msg)
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
+            import traceback
+            traceback.print_exc()
             continue
         
         # Execute based on mode
@@ -551,6 +616,11 @@ def main():
         elif mode == "5":
             # Embeddings Test - run test and loop back
             success, error = run_embeddings_test(provider)
+            if not error:
+                print()
+        elif mode == "6":
+            # Agent Test - run test and loop back
+            success, error = run_agent_test(provider)
             if not error:
                 print()
 
