@@ -28,6 +28,7 @@
     "@google/genai": "^1.11.0",
     "@langchain/core": "^0.3.66",
     "@langchain/openai": "^0.3.14",
+    "@mastra/core": "^0.24.1",
     "@posthog/ai": "^6.6.0",
     "ai": "^5.0.42",
     "dotenv": "^16.4.5",

@@ -22,6 +22,7 @@ import { VercelAIAnthropicProvider } from './providers/vercel-ai-anthropic.js';
 import { VercelAIAnthropicStreamingProvider } from './providers/vercel-ai-anthropic-streaming.js';
 import { VercelGenerateObjectProvider } from './providers/vercel-generate-object.js';
 import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js';
+import { MastraProvider } from './providers/mastra.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -140,7 +141,8 @@ function displayProviders(mode?: string): Map<string, string> {
     ['12', 'Vercel generateObject (OpenAI)'],
     ['13', 'Vercel streamObject (OpenAI)'],
     ['14', 'Vercel AI SDK (Anthropic)'],
-    ['15', 'Vercel AI SDK Streaming (Anthropic)']
+    ['15', 'Vercel AI SDK Streaming (Anthropic)'],
+    ['17', 'Mastra (OpenAI) - Manual Instrumentation']
   ]);
 
   // Filter providers for embeddings mode
@@ -184,7 +186,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-16)';
+      let prompt = '\nSelect a provider (1-17)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -195,7 +197,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -280,6 +282,8 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelAIAnthropicStreamingProvider(posthog, aiSessionId);
     case '16':
       return new OpenAITranscriptionProvider(posthog, aiSessionId);
+    case '17':
+      return new MastraProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
