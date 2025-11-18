@@ -4,10 +4,12 @@
  * Demonstrates the withTracing integration pattern.
  *
  * Usage:
- *     ts-node scripts/test_vercel_anthropic.ts
+ *     npx ts-node scripts/test_vercel_anthropic.ts
  *
- * Environment variables needed:
- *     ANTHROPIC_API_KEY - Your Anthropic API key (from .env file)
+ * Environment variables needed (add to .env file):
+ *     ANTHROPIC_API_KEY - Your Anthropic API key
+ *     POSTHOG_API_KEY - Your PostHog project API key
+ *     POSTHOG_HOST - PostHog host (optional, defaults to https://us.i.posthog.com)
  */
 
 import * as dotenv from 'dotenv';
@@ -67,9 +69,7 @@ async function main() {
   const model = withTracing(baseModel, phClient, {
     posthogDistinctId: 'test_user_123',
     posthogProperties: {
-      conversationId: 'test_conversation_abc',
-      testScript: true,
-      timestamp: new Date().toISOString()
+      $ai_span_name: 'test_script'
     },
     posthogPrivacyMode: true,
   });
@@ -97,9 +97,9 @@ async function main() {
     console.log('🔍 Check your PostHog project for events:');
     console.log('Expected event properties:');
     console.log('   - Event: $ai_generation');
+    console.log('   - $ai_span_name: test_script');
     console.log('   - Model: claude-sonnet-4-20250514');
     console.log('   - Distinct ID: test_user_123');
-    console.log('   - conversationId: test_conversation_abc');
     console.log('   - Privacy mode: true (prompts/responses hidden)\n');
 
   } catch (error: any) {
