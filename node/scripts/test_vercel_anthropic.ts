@@ -55,6 +55,7 @@ async function main() {
       flushInterval: 0
     }
   );
+  phClient.debug();
 
   console.log('✅ PostHog client initialized');
   console.log(`   API Key: ${posthogApiKey.substring(0, 20)}...`);
