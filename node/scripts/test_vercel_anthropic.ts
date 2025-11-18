@@ -28,26 +28,35 @@ async function main() {
   console.log('🚀 Testing PostHog LLM Analytics - Vercel AI + Anthropic\n');
 
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const posthogApiKey = process.env.POSTHOG_API_KEY;
+  const posthogHost = process.env.POSTHOG_HOST || 'https://us.i.posthog.com';
 
   if (!anthropicApiKey) {
     console.error('❌ Error: ANTHROPIC_API_KEY environment variable not set');
-    console.log('\nPlease set your Anthropic API key:');
-    console.log('  export ANTHROPIC_API_KEY=your_api_key_here\n');
+    console.log('\nPlease add to your .env file:');
+    console.log('  ANTHROPIC_API_KEY=your_api_key_here\n');
+    process.exit(1);
+  }
+
+  if (!posthogApiKey) {
+    console.error('❌ Error: POSTHOG_API_KEY environment variable not set');
+    console.log('\nPlease add to your .env file:');
+    console.log('  POSTHOG_API_KEY=your_posthog_project_key\n');
     process.exit(1);
   }
 
   const phClient = new PostHog(
-    'phc_ABOAagCSNfMOUWin6A6Tda0WuhzWLFSXjSgSiq9KKBs',
+    posthogApiKey,
     {
-      host: 'https://us.i.posthog.com',
+      host: posthogHost,
       flushAt: 1,
       flushInterval: 0
     }
   );
 
   console.log('✅ PostHog client initialized');
-  console.log('   Project: phc_ABOAagCSNfMOUWin6A6Tda0WuhzWLFSXjSgSiq9KKBs');
-  console.log('   Host: https://us.i.posthog.com\n');
+  console.log(`   API Key: ${posthogApiKey.substring(0, 20)}...`);
+  console.log(`   Host: ${posthogHost}\n`);
 
   const anthropicClient = createAnthropic({
     apiKey: anthropicApiKey,
