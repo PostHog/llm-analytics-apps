@@ -21,3 +21,9 @@ openai
 
 # LiteLLM
 litellm
+
+# OpenTelemetry
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+opentelemetry-instrumentation-openai
