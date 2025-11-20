@@ -1,8 +1,10 @@
 """
-OpenAI provider with OpenTelemetry instrumentation.
+OpenAI provider with OpenTelemetry v1 instrumentation.
 
-This provider uses the OpenAI SDK with OTEL instrumentation to send traces to PostHog.
-Follows OpenTelemetry GenAI semantic conventions.
+This provider uses the community OpenAI v1 instrumentation which sends everything
+(metadata + message content) as trace span attributes. Only requires traces endpoint.
+
+Requires: opentelemetry-instrumentation-openai
 """
 
 import os
@@ -55,8 +57,8 @@ from .constants import (
 )
 
 
-class OpenAIOtelProvider(BaseProvider):
-    """OpenAI provider with OpenTelemetry instrumentation for PostHog."""
+class OpenAIOtelV1Provider(BaseProvider):
+    """OpenAI provider with OpenTelemetry v1 instrumentation for PostHog."""
 
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
@@ -88,7 +90,7 @@ class OpenAIOtelProvider(BaseProvider):
     def _setup_otel(self):
         """Setup OpenTelemetry with PostHog OTLP endpoint."""
         # Check if already configured
-        if hasattr(OpenAIOtelProvider, '_otel_configured'):
+        if hasattr(OpenAIOtelV1Provider, '_otel_configured'):
             return
 
         # Create resource with service name
@@ -134,7 +136,7 @@ class OpenAIOtelProvider(BaseProvider):
         OpenAIInstrumentor().instrument()
 
         # Mark as configured
-        OpenAIOtelProvider._otel_configured = True
+        OpenAIOtelV1Provider._otel_configured = True
 
         if self.debug_mode:
             print(f"✅ OpenTelemetry configured to send to: {otlp_endpoint}")
@@ -198,7 +200,7 @@ class OpenAIOtelProvider(BaseProvider):
         ]
 
     def get_name(self):
-        return "OpenAI with OpenTelemetry"
+        return "OpenAI with OpenTelemetry v1"
 
     def chat(self, user_input: str, base64_image: str = None) -> str:
         """Send a message to OpenAI and get response with OTEL tracing"""

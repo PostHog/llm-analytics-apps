@@ -26,4 +26,5 @@ litellm
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
-opentelemetry-instrumentation-openai
+opentelemetry-instrumentation-openai  # v1 instrumentation
+opentelemetry-instrumentation-openai-v2  # v2 instrumentation (official)

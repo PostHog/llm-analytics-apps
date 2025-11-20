@@ -20,7 +20,8 @@ from providers.openai_chat_streaming import OpenAIChatStreamingProvider
 from providers.openai_streaming import OpenAIStreamingProvider
 from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
-from providers.openai_otel import OpenAIOtelProvider
+from providers.openai_otel_v1 import OpenAIOtelV1Provider
+from providers.openai_otel_v2 import OpenAIOtelV2Provider
 
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -111,7 +112,8 @@ def display_providers(mode=None):
         "9": "OpenAI Chat Completions Streaming",
         "10": "LiteLLM (Sync)",
         "11": "LiteLLM (Async)",
-        "12": "OpenAI with OpenTelemetry"
+        "12": "OpenAI with OpenTelemetry v1",
+        "13": "OpenAI with OpenTelemetry v2"
     }
 
     # Filter providers for embeddings mode
@@ -137,15 +139,15 @@ def display_providers(mode=None):
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
-    
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
+
     # Build prompt based on valid choices
     if len(valid_choices) == 2:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[1]})"
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-12)"
+        prompt = "\nSelect a provider (1-13)"
     
     if allow_all:
         prompt += ", 'a' for all providers"
@@ -227,7 +229,9 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
     elif choice == "11":
         return LiteLLMStreamingProvider(posthog)
     elif choice == "12":
-        return OpenAIOtelProvider(posthog)
+        return OpenAIOtelV1Provider(posthog)
+    elif choice == "13":
+        return OpenAIOtelV2Provider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
