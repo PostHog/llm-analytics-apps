@@ -11,7 +11,7 @@ Requires: opentelemetry-instrumentation-openai-v2
 import os
 import json
 from openai import OpenAI
-from opentelemetry import _logs, trace
+from opentelemetry import _events, _logs, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
@@ -20,6 +20,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk._events import EventLoggerProvider
 from posthog import Posthog
 
 from .base import BaseProvider
@@ -88,6 +89,10 @@ class OpenAIOtelV2Provider(BaseProvider):
         )
         logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
         _logs.set_logger_provider(logger_provider)
+
+        # Configure event logger provider (v2 uses Events API which wraps Logs API)
+        event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
+        _events.set_event_logger_provider(event_logger_provider)
 
         # Enable message content capture (v2 requires explicit opt-in)
         os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
@@ -204,6 +209,12 @@ class OpenAIOtelV2Provider(BaseProvider):
         # Call OpenAI (automatically instrumented by OTEL v2)
         # Message content is sent as log events to logs endpoint
         response = self.client.chat.completions.create(**request_params)
+
+        # Force flush logs to ensure they're sent immediately (for debugging)
+        from opentelemetry import _logs
+        logger_provider = _logs.get_logger_provider()
+        if hasattr(logger_provider, 'force_flush'):
+            logger_provider.force_flush()
 
         # Debug: Log the API call
         self._debug_api_call("OpenAI OTEL v2", request_params, response)
