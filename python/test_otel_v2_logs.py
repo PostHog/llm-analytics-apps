@@ -38,7 +38,7 @@ print("OpenTelemetry v2 Logs Test")
 print("=" * 60)
 print(f"PostHog Host: {POSTHOG_HOST}")
 print(f"Project ID: {POSTHOG_PROJECT_ID}")
-print(f"API Key: {POSTHOG_API_KEY[:10]}...")
+print("API Key: [REDACTED]")
 print()
 
 # Create resource
