@@ -36,7 +36,7 @@ if (!OPENAI_API_KEY) {
 }
 
 // Configure Mastra with OtelExporter pointing to PostHog OTEL endpoint
-const tracesEndpoint = `${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/ai/otel/v1/traces`;
+const tracesEndpoint = `${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/ai/otel/traces`;
 
 const mastra = new Mastra({
   observability: {

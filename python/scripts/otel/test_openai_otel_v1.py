@@ -31,7 +31,7 @@ resource = Resource.create({
     "user.id": "v1-conversation-test"
 })
 
-traces_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/v1/traces"
+traces_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/traces"
 tracer_provider = TracerProvider(resource=resource)
 trace_exporter = OTLPSpanExporter(
     endpoint=traces_endpoint,

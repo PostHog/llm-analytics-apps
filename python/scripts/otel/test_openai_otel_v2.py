@@ -36,7 +36,7 @@ resource = Resource.create({
     "user.id": "v2-conversation-test"
 })
 
-traces_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/v1/traces"
+traces_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/traces"
 tracer_provider = TracerProvider(resource=resource)
 trace_exporter = OTLPSpanExporter(
     endpoint=traces_endpoint,
@@ -45,7 +45,7 @@ trace_exporter = OTLPSpanExporter(
 tracer_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
 trace.set_tracer_provider(tracer_provider)
 
-logs_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/v1/logs"
+logs_endpoint = f"{POSTHOG_HOST}/api/projects/{POSTHOG_PROJECT_ID}/ai/otel/logs"
 logger_provider = LoggerProvider(resource=resource)
 log_exporter = OTLPLogExporter(
     endpoint=logs_endpoint,
