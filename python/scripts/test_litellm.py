@@ -13,7 +13,7 @@ import os
 import sys
 import uuid
 import time
-
+from urllib.parse import urlparse, urlunparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dotenv import load_dotenv
@@ -22,9 +22,21 @@ load_dotenv(env_path, override=True)
 
 # Set up PostHog env vars BEFORE importing litellm (which initializes PostHog integration)
 posthog_host = os.getenv("POSTHOG_HOST", "https://us.posthog.com")
-# Convert us.posthog.com -> us.i.posthog.com for LiteLLM's batch API
-if "posthog.com" in posthog_host and ".i." not in posthog_host:
-    posthog_host = posthog_host.replace("://us.", "://us.i.").replace("://eu.", "://eu.i.")
+# Convert us.posthog.com -> us.i.posthog.com for LiteLLM's batch API (robust check)
+parsed_url = urlparse(posthog_host)
+host = parsed_url.hostname
+# Only rewrite for specific hosts and if not already rewritten
+if host and host in ("us.posthog.com", "eu.posthog.com") and ".i." not in host:
+    new_host = host.replace("us.", "us.i.").replace("eu.", "eu.i.")
+    # Reconstruct the URL with the new host/subdomain
+    posthog_host = urlunparse((
+        parsed_url.scheme,
+        new_host + (":" + str(parsed_url.port) if parsed_url.port else ""),
+        parsed_url.path,
+        parsed_url.params,
+        parsed_url.query,
+        parsed_url.fragment
+    ))
 os.environ["POSTHOG_API_KEY"] = os.getenv("POSTHOG_API_KEY")
 os.environ["POSTHOG_API_URL"] = posthog_host
 
