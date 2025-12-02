@@ -23,6 +23,7 @@ import { VercelAIAnthropicStreamingProvider } from './providers/vercel-ai-anthro
 import { VercelGenerateObjectProvider } from './providers/vercel-generate-object.js';
 import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js';
 import { MastraProvider } from './providers/mastra.js';
+import { MastraOtelProvider } from './providers/mastra-otel.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,7 +143,8 @@ function displayProviders(mode?: string): Map<string, string> {
     ['13', 'Vercel streamObject (OpenAI)'],
     ['14', 'Vercel AI SDK (Anthropic)'],
     ['15', 'Vercel AI SDK Streaming (Anthropic)'],
-    ['17', 'Mastra (OpenAI) - Manual Instrumentation']
+    ['17', 'Mastra (OpenAI) - Manual Instrumentation'],
+    ['18', 'Mastra (OpenAI) - OTEL Instrumentation']
   ]);
 
   // Filter providers for embeddings mode
@@ -186,7 +188,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-17)';
+      let prompt = '\nSelect a provider (1-18)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -197,7 +199,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -284,6 +286,14 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new OpenAITranscriptionProvider(posthog, aiSessionId);
     case '17':
       return new MastraProvider(posthog, aiSessionId);
+    case '18':
+      return new MastraOtelProvider(
+        posthog,
+        aiSessionId,
+        process.env.POSTHOG_HOST || 'http://localhost:8000',
+        process.env.POSTHOG_PROJECT_ID || '1',
+        process.env.POSTHOG_API_KEY!
+      );
     default:
       throw new Error('Invalid provider choice');
   }

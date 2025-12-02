@@ -29,6 +29,7 @@
     "@langchain/core": "^0.3.66",
     "@langchain/openai": "^0.3.14",
     "@mastra/core": "^0.24.1",
+    "@mastra/otel-exporter": "^0.3.3",
     "@posthog/ai": "^6.6.0",
     "ai": "^5.0.42",
     "dotenv": "^16.4.5",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.0.0"
   }
 }
