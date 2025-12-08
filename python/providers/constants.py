@@ -18,7 +18,8 @@ ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929"
 GEMINI_MODEL = "gemini-2.5-flash"
 
 # Default API Parameters
-DEFAULT_MAX_TOKENS = 1000
+# Note: gpt-5-mini uses reasoning tokens internally, so needs higher limit
+DEFAULT_MAX_TOKENS = 4000
 
 # Extended Thinking Configuration (Anthropic)
 # Set ENABLE_THINKING=1 in .env to enable extended thinking
