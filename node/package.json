@@ -22,6 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.39",
+    "@ai-sdk/google": "^3.0.5",
     "@ai-sdk/openai": "^2.0.4",
     "@ai-sdk/provider-utils": "^3.0.1",
     "@anthropic-ai/sdk": "^0.27.0",
@@ -30,7 +31,7 @@
     "@langchain/openai": "^0.3.14",
     "@mastra/core": "^0.24.1",
     "@posthog/ai": "^6.6.0",
-    "ai": "^5.0.42",
+    "ai": "^6.0.16",
     "dotenv": "^16.4.5",
     "langchain": "^0.3.30",
     "openai": "^4.0.0",
