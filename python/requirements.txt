@@ -19,6 +19,9 @@ langchain-openai
 # OpenAI (also needed for LangChain)
 openai
 
+# OpenAI Agents SDK
+openai-agents
+
 # LiteLLM
 litellm
 
