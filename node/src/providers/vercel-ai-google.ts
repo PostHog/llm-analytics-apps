@@ -1,18 +1,18 @@
 import { withTracing } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
-import { generateText, experimental_generateImage } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_IMAGE_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { GEMINI_MODEL, GEMINI_IMAGE_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
-export class VercelAIProvider extends BaseProvider {
-  private openaiClient: any;
+export class VercelAIGoogleProvider extends BaseProvider {
+  private googleClient: any;
 
   constructor(posthogClient: PostHog, aiSessionId: string | null = null) {
     super(posthogClient, aiSessionId);
-    this.openaiClient = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY!
+    this.googleClient = createGoogleGenerativeAI({
+      apiKey: process.env.GEMINI_API_KEY!
     });
     this.messages = this.getInitialMessages();
   }
@@ -32,49 +32,61 @@ export class VercelAIProvider extends BaseProvider {
   }
 
   getName(): string {
-    return 'Vercel AI SDK (OpenAI)';
+    return 'Vercel AI SDK (Google)';
   }
 
-  async generateImage(prompt: string, model: string = OPENAI_IMAGE_MODEL): Promise<string> {
+  async generateImage(prompt: string, model: string = GEMINI_IMAGE_MODEL): Promise<string> {
     try {
-      // Use the OpenAI image model directly (withTracing doesn't support image models yet)
-      const imageModel = this.openaiClient.image(model);
-
-      const { image } = await experimental_generateImage({
-        model: imageModel,
-        prompt: prompt,
-        n: 1,
-        size: '1024x1024',
+      // Gemini 2.5 Flash Image uses generateText with multimodal output
+      const tracedModel = withTracing(this.googleClient(model), this.posthogClient, {
+        posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
+        posthogPrivacyMode: false,
+        posthogProperties: {
+          $ai_span_name: "vercel_ai_generate_image_google",
+          ...this.getPostHogProperties(),
+        },
       });
 
-      this.debugApiCall("Vercel AI SDK Image Generation", { model, prompt }, { image });
+      const result = await generateText({
+        model: tracedModel,
+        prompt: prompt,
+      });
 
-      if (image?.base64) {
-        return `data:image/png;base64,${image.base64.substring(0, 100)}... (base64 image data, ${image.base64.length} chars total)`;
+      this.debugApiCall("Vercel AI SDK Image Generation (Google)", { model, prompt }, result);
+
+      // Generated images are returned in result.files array
+      if (result.files && result.files.length > 0) {
+        for (const file of result.files) {
+          if (file.mediaType?.startsWith('image/')) {
+            // Convert Uint8Array to base64
+            const b64 = Buffer.from(file.uint8Array).toString('base64');
+            return `data:${file.mediaType};base64,${b64.substring(0, 100)}... (base64 image data, ${b64.length} chars total)`;
+          }
+        }
       }
       return "";
     } catch (error: any) {
-      console.error('Error in Vercel AI image generation:', error);
-      throw new Error(`Vercel AI Image Generation error: ${error.message}`);
+      console.error('Error in Vercel AI Google image generation:', error);
+      throw new Error(`Vercel AI Google Image Generation error: ${error.message}`);
     }
   }
 
   async chat(userInput: string, base64Image?: string): Promise<string> {
     let userContent: any;
-    
+
     if (base64Image) {
       // For image input, create content array with text and image
       userContent = [
         { type: 'text', text: userInput },
-        { 
-          type: 'image', 
+        {
+          type: 'image',
           image: `data:image/png;base64,${base64Image}`
         }
       ];
     } else {
       userContent = userInput;
     }
-    
+
     const userMessage: Message = {
       role: 'user',
       content: userContent
@@ -84,13 +96,11 @@ export class VercelAIProvider extends BaseProvider {
     const displayParts: string[] = [];
 
     try {
-      // Use vision model for images, regular model otherwise
-      const modelName = base64Image ? OPENAI_VISION_MODEL : OPENAI_CHAT_MODEL;
-      const model = withTracing(this.openaiClient(modelName), this.posthogClient, {
+      const model = withTracing(this.googleClient(GEMINI_MODEL), this.posthogClient, {
         posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
         posthogPrivacyMode: false,
         posthogProperties: {
-          $ai_span_name: "vercel_ai_generate_text",
+          $ai_span_name: "vercel_ai_generate_text_google",
           ...this.getPostHogProperties(),
         },
       });
@@ -125,7 +135,7 @@ export class VercelAIProvider extends BaseProvider {
       };
 
       const { text, toolResults } = await generateText(requestParams);
-      this.debugApiCall("Vercel AI SDK (OpenAI)", requestParams, { text, toolResults });
+      this.debugApiCall("Vercel AI SDK (Google)", requestParams, { text, toolResults });
 
       if (text) {
         displayParts.push(text);
@@ -164,8 +174,8 @@ export class VercelAIProvider extends BaseProvider {
 
       return displayParts.length > 0 ? displayParts.join('\n\n') : 'No response received';
     } catch (error: any) {
-      console.error('Error in Vercel AI chat:', error);
-      throw new Error(`Vercel AI Provider error: ${error.message}`);
+      console.error('Error in Vercel AI Google chat:', error);
+      throw new Error(`Vercel AI Google Provider error: ${error.message}`);
     }
   }
 }

@@ -66,7 +66,7 @@ def select_mode():
         "4": "Image Test",
         "5": "Embeddings Test"
     }
-    
+
     print("\nSelect Mode:")
     print("=" * 50)
     for key, name in modes.items():
@@ -81,7 +81,7 @@ def select_mode():
         elif key == "5":
             print(f"  {key}. {name} (Auto-test: Generate embeddings)")
     print("=" * 50)
-    
+
     while True:
         try:
             choice = input("\nSelect a mode (1-5) or 'q' to quit: ").strip().lower()
@@ -92,7 +92,7 @@ def select_mode():
                 print("\n👋 Goodbye!")
                 exit(0)
             else:
-                print("❌ Invalid choice. Please select 1, 2, 3, 4, or 5.")
+                print("❌ Invalid choice. Please select 1-5.")
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
             exit(0)
@@ -125,7 +125,7 @@ def display_providers(mode=None):
             "10": "LiteLLM (Sync)",
             "11": "LiteLLM (Async)"
         }
-    
+
     print("\nAvailable AI Providers:")
     print("=" * 50)
     for key, name in providers.items():
@@ -412,7 +412,7 @@ def run_all_tests(mode):
             ("10", "LiteLLM (Sync)"),
             ("11", "LiteLLM (Async)")
         ]
-    
+
     if mode == "2":
         test_name = "Tool Call Test"
     elif mode == "3":
