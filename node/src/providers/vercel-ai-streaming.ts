@@ -1,10 +1,10 @@
 import { withTracing } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
-import { streamText, experimental_generateImage } from 'ai';
+import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_IMAGE_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIStreamingProvider extends StreamingProvider {
   private openaiClient: any;
@@ -33,30 +33,6 @@ export class VercelAIStreamingProvider extends StreamingProvider {
 
   getName(): string {
     return 'Vercel AI SDK Streaming (OpenAI)';
-  }
-
-  async generateImage(prompt: string, model: string = OPENAI_IMAGE_MODEL): Promise<string> {
-    try {
-      // Use the OpenAI image model directly (withTracing doesn't support image models yet)
-      const imageModel = this.openaiClient.image(model);
-
-      const { image } = await experimental_generateImage({
-        model: imageModel,
-        prompt: prompt,
-        n: 1,
-        size: '1024x1024',
-      });
-
-      this.debugApiCall("Vercel AI SDK Image Generation", { model, prompt }, { image });
-
-      if (image?.base64) {
-        return `data:image/png;base64,${image.base64.substring(0, 100)}... (base64 image data, ${image.base64.length} chars total)`;
-      }
-      return "";
-    } catch (error: any) {
-      console.error('Error in Vercel AI image generation:', error);
-      throw new Error(`Vercel AI Image Generation error: ${error.message}`);
-    }
   }
 
   async *chatStream(

@@ -182,10 +182,8 @@ function displayProviders(mode?: string): Map<string, string> {
 
   // Filter providers for image generation mode
   if (mode === '8') {
-    // Only Vercel AI providers support image generation
+    // Only Vercel AI Google providers support image generation
     providers = new Map<string, string>([
-      ['10', 'Vercel AI SDK (OpenAI)'],
-      ['11', 'Vercel AI SDK Streaming (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
       ['19', 'Vercel AI SDK Streaming (Google)']
     ]);
@@ -640,10 +638,8 @@ async function runAllTests(mode: string): Promise<void> {
 
   // Filter providers for image generation test (only those that support it)
   if (mode === '8') {
-    // Only Vercel AI providers support image generation
+    // Only Vercel AI Google providers support image generation
     providersInfo = [
-      ['10', 'Vercel AI SDK (OpenAI)'],
-      ['11', 'Vercel AI SDK Streaming (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
       ['19', 'Vercel AI SDK Streaming (Google)']
     ];

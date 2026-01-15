@@ -10,7 +10,6 @@
 export const OPENAI_CHAT_MODEL = "gpt-5-mini";
 export const OPENAI_VISION_MODEL = "gpt-4o";
 export const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
-export const OPENAI_IMAGE_MODEL = "gpt-image-1.5";
 
 // Anthropic Models
 export const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
