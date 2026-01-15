@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
+.PHONY: run-python run-node run-python-debug run-node-debug run-node-sdk5 run-node-sdk6 run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
 
 run-python:
 	@cd python && ./run.sh
@@ -11,6 +11,14 @@ run-python-debug:
 
 run-node-debug:
 	@cd node && DEBUG=1 ./run.sh
+
+## Run node app with AI SDK 5 (old)
+run-node-sdk5:
+	@cd node && AI_SDK_VERSION=5 ./run.sh
+
+## Run node app with AI SDK 6 (new)
+run-node-sdk6:
+	@cd node && AI_SDK_VERSION=6 ./run.sh
 
 run-trace-generator:
 	@cd python/trace-generator && ./run.sh
