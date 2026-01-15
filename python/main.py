@@ -533,6 +533,10 @@ def main():
             if enable_thinking:
                 status_msg += f" (Thinking: enabled, budget: {thinking_budget})"
             print(status_msg)
+
+            # Show mode selection for OpenAI Agents SDK
+            if choice == "13" and hasattr(provider, 'prompt_mode_selection'):
+                provider.prompt_mode_selection()
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
             continue

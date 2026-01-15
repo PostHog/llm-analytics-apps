@@ -5,17 +5,21 @@ This example demonstrates:
 - Multiple specialized agents with different capabilities
 - Agent handoffs based on user intent
 - Tool usage (weather, math)
+- Input/Output guardrails for content filtering
+- Custom spans for tracking custom operations
 - PostHog instrumentation for LLM analytics
 
 The triage agent routes requests to specialized agents:
 - Weather Agent: Handles weather-related queries with a weather tool
 - Math Agent: Handles calculations and math problems
 - General Agent: Handles general questions and conversation
+- Guarded Agent: Demonstrates input/output guardrails
 """
 
 from typing import Annotated
 from pydantic import BaseModel, Field
-from agents import Agent, function_tool
+from agents import Agent, Runner, function_tool, input_guardrail, output_guardrail, GuardrailFunctionOutput, RunContextWrapper, TResponseInputItem, trace
+from agents.tracing import custom_span
 
 
 # Weather tool and agent
@@ -149,4 +153,158 @@ simple_agent = Agent(
     Use your tools to help users with weather queries and calculations.""",
     model="gpt-4o-mini",
     tools=[get_weather, calculate],
+)
+
+
+# ============================================================================
+# Guardrails - demonstrate input/output content filtering
+# ============================================================================
+
+# Blocked words for content filtering demonstration
+BLOCKED_INPUT_WORDS = ["hack", "exploit", "bypass", "illegal"]
+BLOCKED_OUTPUT_WORDS = ["confidential", "secret", "classified"]
+
+
+@input_guardrail
+async def content_filter_guardrail(
+    ctx: RunContextWrapper[None], agent: Agent, input: str | list[TResponseInputItem]
+) -> GuardrailFunctionOutput:
+    """
+    Input guardrail that filters potentially harmful content.
+    This demonstrates how guardrails trigger $ai_error_type: input_guardrail_triggered
+    """
+    # Convert input to string for checking
+    if isinstance(input, list):
+        input_text = " ".join(
+            str(item.get("content", "")) if isinstance(item, dict) else str(item)
+            for item in input
+        ).lower()
+    else:
+        input_text = input.lower()
+
+    # Check for blocked words
+    for word in BLOCKED_INPUT_WORDS:
+        if word in input_text:
+            return GuardrailFunctionOutput(
+                output_info={"blocked_word": word, "reason": "content_policy"},
+                tripwire_triggered=True,
+            )
+
+    return GuardrailFunctionOutput(
+        output_info={"status": "passed"},
+        tripwire_triggered=False,
+    )
+
+
+@output_guardrail
+async def sensitive_data_guardrail(
+    ctx: RunContextWrapper[None], agent: Agent, output: str
+) -> GuardrailFunctionOutput:
+    """
+    Output guardrail that prevents leaking sensitive information.
+    This demonstrates how guardrails trigger $ai_error_type: output_guardrail_triggered
+    """
+    output_lower = output.lower()
+
+    # Check for sensitive words in output
+    for word in BLOCKED_OUTPUT_WORDS:
+        if word in output_lower:
+            return GuardrailFunctionOutput(
+                output_info={"blocked_word": word, "reason": "data_protection"},
+                tripwire_triggered=True,
+            )
+
+    return GuardrailFunctionOutput(
+        output_info={"status": "passed"},
+        tripwire_triggered=False,
+    )
+
+
+# Guarded Agent - demonstrates guardrails
+guarded_agent = Agent(
+    name="GuardedAgent",
+    instructions="""You are a helpful assistant with content filtering.
+    You help users while respecting content policies and data protection rules.
+    Be helpful and informative, but avoid discussing anything harmful or leaking sensitive data.""",
+    model="gpt-4o-mini",
+    input_guardrails=[content_filter_guardrail],
+    output_guardrails=[sensitive_data_guardrail],
+)
+
+
+# ============================================================================
+# Custom Span Examples - demonstrate custom operation tracking
+# ============================================================================
+
+async def process_with_custom_spans(user_input: str, group_id: str = None) -> dict:
+    """
+    Example function demonstrating custom spans for tracking custom operations.
+    This creates nested spans that show up in PostHog as $ai_span events with type=custom.
+
+    Must be wrapped in a trace context to be tracked properly.
+    """
+    result = {}
+
+    # Wrap everything in a trace context so custom spans are recorded
+    with trace("custom_processing_workflow", group_id=group_id):
+
+        # Outer custom span for the entire processing pipeline
+        with custom_span(name="data_processing_pipeline"):
+
+            # Custom span for input preprocessing
+            with custom_span(name="preprocess_input", data={"input_length": len(user_input)}):
+                # Simulate preprocessing
+                processed_input = user_input.strip().lower()
+                result["preprocessed"] = processed_input
+
+            # Custom span for validation
+            with custom_span(name="validate_input", data={"input": processed_input}):
+                # Simulate validation
+                is_valid = len(processed_input) > 0 and len(processed_input) < 1000
+                result["valid"] = is_valid
+
+            # Custom span for any custom business logic
+            with custom_span(name="business_logic", data={"validated": is_valid}):
+                # Simulate some business logic
+                if is_valid:
+                    result["processed"] = True
+                    result["word_count"] = len(processed_input.split())
+                else:
+                    result["processed"] = False
+                    result["error"] = "Invalid input"
+
+    return result
+
+
+# ============================================================================
+# Error demonstration agent - for testing error tracking
+# ============================================================================
+
+@function_tool
+def unreliable_tool(
+    action: Annotated[str, "The action to perform: 'succeed', 'fail', or 'error'"]
+) -> str:
+    """A tool that can succeed, fail gracefully, or raise an error for testing."""
+    print(f"[tool] unreliable_tool called with action: {action}")
+    if action == "succeed":
+        return "Operation completed successfully!"
+    elif action == "fail":
+        return "Error: Operation failed due to invalid state"
+    elif action == "error":
+        raise ValueError("Simulated tool error for testing error tracking")
+    else:
+        return f"Unknown action: {action}"
+
+
+error_demo_agent = Agent(
+    name="ErrorDemoAgent",
+    instructions="""You are a testing assistant that demonstrates error handling.
+    Use the unreliable_tool to test different outcomes:
+    - 'succeed': Shows successful tool execution
+    - 'fail': Shows graceful failure handling
+    - 'error': Shows exception handling and error tracking
+
+    When asked to test errors, use the appropriate action.""",
+    model="gpt-4o-mini",
+    tools=[unreliable_tool],
 )
