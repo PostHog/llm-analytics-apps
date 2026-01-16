@@ -1,62 +1,39 @@
 """
-OpenAI provider with OpenTelemetry instrumentation.
+OpenAI provider with OpenTelemetry v2 instrumentation.
 
-This provider uses the OpenAI SDK with OTEL instrumentation to send traces to PostHog.
-Follows OpenTelemetry GenAI semantic conventions.
+This provider uses the official OpenAI v2 instrumentation which sends:
+- Span metadata (model, tokens, etc.) to traces endpoint
+- Message content (prompts/completions) as log events to logs endpoint
+
+Requires: opentelemetry-instrumentation-openai-v2
 """
 
 import os
 import json
 from openai import OpenAI
-from opentelemetry import trace, baggage, context
+from opentelemetry import _events, _logs, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace import SpanProcessor, ReadableSpan
-from opentelemetry.propagate import set_global_textmap
-from opentelemetry.propagators.composite import CompositePropagator
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from opentelemetry.baggage.propagation import W3CBaggagePropagator
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk._events import EventLoggerProvider
 from posthog import Posthog
 
 from .base import BaseProvider
-
-
-class SessionIDSpanProcessor(SpanProcessor):
-    """Span processor that adds session_id to all spans."""
-
-    def __init__(self, session_id: str):
-        self.session_id = session_id
-
-    def on_start(self, span: ReadableSpan, parent_context=None) -> None:
-        """Called when a span is started - add session_id attribute."""
-        if self.session_id:
-            span.set_attribute("posthog.ai.session_id", self.session_id)
-
-    def on_end(self, span: ReadableSpan) -> None:
-        """Called when a span ends."""
-        pass
-
-    def shutdown(self) -> None:
-        """Called on shutdown."""
-        pass
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush."""
-        return True
 from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_POSTHOG_DISTINCT_ID,
     SYSTEM_PROMPT_FRIENDLY
 )
 
 
-class OpenAIOtelProvider(BaseProvider):
-    """OpenAI provider with OpenTelemetry instrumentation for PostHog."""
+class OpenAIOtelV2Provider(BaseProvider):
+    """OpenAI provider with OpenTelemetry v2 instrumentation for PostHog."""
 
     def __init__(self, posthog_client: Posthog):
         super().__init__(posthog_client)
@@ -71,73 +48,65 @@ class OpenAIOtelProvider(BaseProvider):
                 "POSTHOG_PROJECT_ID and POSTHOG_API_KEY must be set in environment"
             )
 
-        # Extract session ID from PostHog super_properties
-        self.session_id = None
-        if hasattr(posthog_client, 'super_properties') and posthog_client.super_properties:
-            self.session_id = posthog_client.super_properties.get("$ai_session_id")
+        # Setup OpenTelemetry v2 (traces + logs)
+        self._setup_otel_v2()
 
-        # Setup OpenTelemetry once (only if not already configured)
-        self._setup_otel()
-
-        # Create OpenAI client (will be instrumented by OTEL)
+        # Create OpenAI client (will be instrumented by OTEL v2)
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         # Initialize conversation
         self.messages = self.get_initial_messages()
 
-    def _setup_otel(self):
-        """Setup OpenTelemetry with PostHog OTLP endpoint."""
+    def _setup_otel_v2(self):
+        """Setup OpenTelemetry v2 with PostHog OTLP endpoints for traces and logs."""
         # Check if already configured
-        if hasattr(OpenAIOtelProvider, '_otel_configured'):
+        if hasattr(OpenAIOtelV2Provider, '_otel_configured'):
             return
 
         # Create resource with service name
         resource = Resource.create({
-            "service.name": "llm-analytics-app-otel",
+            "service.name": "llm-analytics-app-otel-v2",
             "service.version": "1.0.0",
             "deployment.environment": "development",
         })
 
-        # Create tracer provider
+        # Configure traces exporter
+        traces_endpoint = f"{self.posthog_host}/api/projects/{self.posthog_project_id}/ai/otel/v1/traces"
         tracer_provider = TracerProvider(resource=resource)
-
-        # Configure OTLP exporter for PostHog
-        otlp_endpoint = f"{self.posthog_host}/api/projects/{self.posthog_project_id}/ai/otel/v1/traces"
-
         trace_exporter = OTLPSpanExporter(
-            endpoint=otlp_endpoint,
+            endpoint=traces_endpoint,
             headers={"Authorization": f"Bearer {self.posthog_api_key}"},
         )
-
-        # Add batch processor
         tracer_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
-
-        # Add session ID processor if we have a session_id
-        if self.session_id:
-            tracer_provider.add_span_processor(SessionIDSpanProcessor(self.session_id))
-
-        # Set as global tracer provider
         trace.set_tracer_provider(tracer_provider)
 
-        # Configure propagators to include baggage
-        set_global_textmap(
-            CompositePropagator([
-                TraceContextTextMapPropagator(),
-                W3CBaggagePropagator(),
-            ])
+        # Configure logs exporter (v2 sends message content here)
+        logs_endpoint = f"{self.posthog_host}/api/projects/{self.posthog_project_id}/ai/otel/v1/logs"
+        logger_provider = LoggerProvider(resource=resource)
+        log_exporter = OTLPLogExporter(
+            endpoint=logs_endpoint,
+            headers={"Authorization": f"Bearer {self.posthog_api_key}"},
         )
+        logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+        _logs.set_logger_provider(logger_provider)
 
-        # Enable message content capture
+        # Configure event logger provider (v2 uses Events API which wraps Logs API)
+        event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
+        _events.set_event_logger_provider(event_logger_provider)
+
+        # Enable message content capture (v2 requires explicit opt-in)
         os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "true"
 
-        # Instrument OpenAI SDK
+        # Instrument OpenAI SDK with v2 instrumentation
         OpenAIInstrumentor().instrument()
 
         # Mark as configured
-        OpenAIOtelProvider._otel_configured = True
+        OpenAIOtelV2Provider._otel_configured = True
 
         if self.debug_mode:
-            print(f"✅ OpenTelemetry configured to send to: {otlp_endpoint}")
+            print(f"✅ OpenTelemetry v2 configured:")
+            print(f"   Traces → {traces_endpoint}")
+            print(f"   Logs   → {logs_endpoint}")
 
     def get_initial_messages(self):
         """Return initial messages with system prompt"""
@@ -198,13 +167,12 @@ class OpenAIOtelProvider(BaseProvider):
         ]
 
     def get_name(self):
-        return "OpenAI with OpenTelemetry"
+        return "OpenAI with OpenTelemetry v2"
 
     def chat(self, user_input: str, base64_image: str = None) -> str:
-        """Send a message to OpenAI and get response with OTEL tracing"""
+        """Send a message to OpenAI and get response with OTEL v2 tracing"""
         # Add user message to history
         if base64_image:
-            # For image input, create content array with text and image
             user_content = [
                 {
                     "type": "text",
@@ -238,12 +206,18 @@ class OpenAIOtelProvider(BaseProvider):
             "tool_choice": "auto",
         }
 
-        # Call OpenAI (automatically instrumented by OTEL)
-        # Session ID is added to all spans by our SessionIDSpanProcessor
+        # Call OpenAI (automatically instrumented by OTEL v2)
+        # Message content is sent as log events to logs endpoint
         response = self.client.chat.completions.create(**request_params)
 
+        # Force flush logs to ensure they're sent immediately (for debugging)
+        from opentelemetry import _logs
+        logger_provider = _logs.get_logger_provider()
+        if hasattr(logger_provider, 'force_flush'):
+            logger_provider.force_flush()
+
         # Debug: Log the API call
-        self._debug_api_call("OpenAI OTEL", request_params, response)
+        self._debug_api_call("OpenAI OTEL v2", request_params, response)
 
         # Collect response parts for display
         display_parts = []
