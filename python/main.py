@@ -21,6 +21,7 @@ from providers.openai_streaming import OpenAIStreamingProvider
 from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
 from providers.openai_otel import OpenAIOtelProvider
+from providers.openai_transcription import OpenAITranscriptionProvider
 
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -64,9 +65,10 @@ def select_mode():
         "2": "Tool Call Test",
         "3": "Message Test",
         "4": "Image Test",
-        "5": "Embeddings Test"
+        "5": "Embeddings Test",
+        "6": "Transcription Test"
     }
-    
+
     print("\nSelect Mode:")
     print("=" * 50)
     for key, name in modes.items():
@@ -80,19 +82,21 @@ def select_mode():
             print(f"  {key}. {name} (Auto-test: Describe image)")
         elif key == "5":
             print(f"  {key}. {name} (Auto-test: Generate embeddings)")
+        elif key == "6":
+            print(f"  {key}. {name} (Auto-test: Transcribe audio)")
     print("=" * 50)
-    
+
     while True:
         try:
-            choice = input("\nSelect a mode (1-5) or 'q' to quit: ").strip().lower()
-            if choice in ["1", "2", "3", "4", "5"]:
+            choice = input("\nSelect a mode (1-6) or 'q' to quit: ").strip().lower()
+            if choice in ["1", "2", "3", "4", "5", "6"]:
                 clear_screen()
                 return choice
             elif choice == "q":
                 print("\n👋 Goodbye!")
                 exit(0)
             else:
-                print("❌ Invalid choice. Please select 1, 2, 3, 4, or 5.")
+                print("❌ Invalid choice. Please select 1, 2, 3, 4, 5, or 6.")
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
             exit(0)
@@ -111,7 +115,8 @@ def display_providers(mode=None):
         "9": "OpenAI Chat Completions Streaming",
         "10": "LiteLLM (Sync)",
         "11": "LiteLLM (Async)",
-        "12": "OpenAI with OpenTelemetry"
+        "12": "OpenAI with OpenTelemetry",
+        "13": "OpenAI Transcriptions with Whisper"
     }
 
     # Filter providers for embeddings mode
@@ -125,27 +130,36 @@ def display_providers(mode=None):
             "10": "LiteLLM (Sync)",
             "11": "LiteLLM (Async)"
         }
-    
+
+    # Filter providers for transcription mode
+    if mode == "6":
+        # Only OpenAI Transcription provider supports audio transcription
+        providers = {
+            "13": "OpenAI Transcriptions - Whisper"
+        }
+
     print("\nAvailable AI Providers:")
     print("=" * 50)
     for key, name in providers.items():
         print(f"  {key}. {name}")
     print("=" * 50)
-    
+
     return providers
 
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
     
     # Build prompt based on valid choices
-    if len(valid_choices) == 2:
+    if len(valid_choices) == 1:
+        prompt = f"\nSelect a provider ({valid_choices[0]})"
+    elif len(valid_choices) == 2:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[1]})"
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-12)"
+        prompt = "\nSelect a provider (1-13)"
     
     if allow_all:
         prompt += ", 'a' for all providers"
@@ -228,6 +242,8 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return LiteLLMStreamingProvider(posthog)
     elif choice == "12":
         return OpenAIOtelProvider(posthog)
+    elif choice == "13":
+        return OpenAITranscriptionProvider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -385,6 +401,50 @@ def run_embeddings_test(provider):
         print(f'❌ Error: {str(error)}')
         return False, str(error)
 
+
+def run_transcription_test(provider):
+    """Run automated transcription test with audio file"""
+    print(f'\nTranscription Test: {provider.get_name()}')
+    print('-' * 50)
+
+    # Check if provider supports transcription
+    if not hasattr(provider, 'transcribe') or not callable(getattr(provider, 'transcribe')):
+        print(f'❌ {provider.get_name()} does not support transcription')
+        return False, "Provider does not support transcription"
+
+    # Check for test audio file (in the root of llm-analytics-apps)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    audio_path = os.path.join(script_dir, '..', 'test-audio.mp3')
+
+    if not os.path.exists(audio_path):
+        print(f'❌ Test audio file not found at: {audio_path}')
+        print('Please create a test audio file (test-audio.mp3) in the llm-analytics-apps directory')
+        print('You can use any short audio file (mp3, wav, m4a, etc.)')
+        return False, "Test audio file not found"
+
+    try:
+        print(f'\nTranscribing audio file: {audio_path}')
+        print()
+
+        # Transcribe the audio
+        transcription = provider.transcribe(audio_path)
+
+        if transcription and len(transcription) > 0:
+            print(f'✅ Transcription successful')
+            print(f'\nTranscription text:')
+            print(f'"{transcription}"')
+            print()
+        else:
+            print(f'❌ Failed to transcribe audio')
+            return False, "Failed to generate transcription"
+
+        return True, None
+
+    except Exception as error:
+        print(f'❌ Error: {str(error)}')
+        return False, str(error)
+
+
 def run_all_tests(mode):
     """Run tests on all providers and show summary"""
     providers_info = [
@@ -499,8 +559,8 @@ def main():
         # Display providers and get user choice
         providers = display_providers(mode)
         
-        # Allow mode change for all modes, 'all' option only for test modes
-        allow_mode_change = (mode in ["1", "2", "3", "4", "5"])
+        # Allow mode change for all modes, 'all' option only for test modes (not transcription - only 1 provider)
+        allow_mode_change = (mode in ["1", "2", "3", "4", "5", "6"])
         allow_all = (mode in ["2", "3", "4", "5"])
         valid_choices = list(providers.keys())
         choice = get_provider_choice(allow_mode_change=allow_mode_change, allow_all=allow_all, valid_choices=valid_choices)
@@ -557,6 +617,12 @@ def main():
             success, error = run_embeddings_test(provider)
             if not error:
                 print()
+        elif mode == "6":
+            # Transcription Test - run test and loop back
+            success, error = run_transcription_test(provider)
+            if not error:
+                print()
+
 
 if __name__ == "__main__":
     main()

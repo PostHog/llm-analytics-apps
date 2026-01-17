@@ -99,6 +99,7 @@ npm run clean    # Remove dist/ directory
 - Message Test - Simple greeting test
 - Image Test - Image description capabilities test
 - Embeddings Test - Embedding generation (OpenAI only)
+- Transcription Test - Audio transcription (OpenAI only)
 - Structured Output Test - Structured data generation (Vercel AI only, Node.js)
 
 **Test Scripts:**
@@ -169,6 +170,7 @@ All provider implementations inherit from these base classes and implement:
 - `anthropic.py` / `anthropic_streaming.py`
 - `gemini.py` / `gemini_streaming.py`
 - `openai.py` / `openai_chat.py` / `openai_streaming.py` / `openai_chat_streaming.py`
+- `openai_transcription.py`
 - `langchain.py`
 - `litellm_provider.py`
 
