@@ -16,20 +16,12 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Save command-line overrides before sourcing .env
-CMDLINE_AI_SDK_VERSION="${AI_SDK_VERSION:-}"
-
 # Load environment variables from parent .env file
 if [ -f "../.env" ]; then
     echo -e "${BLUE}📋 Loading environment variables from .env...${NC}"
     set -a
     source ../.env
     set +a
-fi
-
-# Restore command-line overrides (they take precedence over .env)
-if [ -n "$CMDLINE_AI_SDK_VERSION" ]; then
-    AI_SDK_VERSION="$CMDLINE_AI_SDK_VERSION"
 fi
 
 # Run shared preparation (fetch/align local PostHog API key)
@@ -58,10 +50,6 @@ fi
 
 echo -e "${YELLOW}📋 Checking npm version...${NC}"
 npm --version
-
-# Determine AI SDK version (default to 6)
-AI_SDK_VERSION="${AI_SDK_VERSION:-6}"
-echo -e "${BLUE}🔧 Using Vercel AI SDK version: ${AI_SDK_VERSION}${NC}"
 
 # Check if using local PostHog packages or npm packages
 if [ -n "$POSTHOG_JS_PATH" ]; then
@@ -97,30 +85,6 @@ if [ -n "$POSTHOG_JS_PATH" ]; then
     echo -e "${YELLOW}🔄 Installing local PostHog packages...${NC}"
     npm install --no-save "$POSTHOG_AI_DIR" "$POSTHOG_NODE_DIR"
 
-    # Install appropriate AI SDK version based on AI_SDK_VERSION
-    echo -e "${YELLOW}🔄 Installing AI SDK packages for version ${AI_SDK_VERSION}...${NC}"
-    rm -rf node_modules/ai node_modules/@ai-sdk
-
-    if [ "$AI_SDK_VERSION" = "5" ]; then
-        echo -e "${YELLOW}  Installing AI SDK 5 (old) packages...${NC}"
-        npm install --no-save "ai@^5.0.0" "@ai-sdk/provider@^2.0.0" "@ai-sdk/openai@^2.0.0" "@ai-sdk/anthropic@^2.0.0" "@ai-sdk/google@^2.0.0"
-    else
-        echo -e "${YELLOW}  Installing AI SDK 6 (new) packages...${NC}"
-        npm install --no-save "ai@^6.0.0" "@ai-sdk/provider@^3.0.0" "@ai-sdk/openai@^3.0.0" "@ai-sdk/anthropic@^3.0.0" "@ai-sdk/google@^3.0.0"
-    fi
-    echo -e "${GREEN}✅ AI SDK ${AI_SDK_VERSION} packages installed${NC}"
-
-    # Deduplicate packages to avoid type conflicts from nested node_modules
-    echo -e "${YELLOW}🔄 Deduplicating packages to avoid type conflicts...${NC}"
-    npm dedupe
-
-    # Remove any nested AI SDK packages from @posthog/ai to ensure we use the top-level ones
-    if [ -d "node_modules/@posthog/ai/node_modules" ]; then
-        echo -e "${YELLOW}🧹 Removing nested AI SDK packages from @posthog/ai...${NC}"
-        rm -rf node_modules/@posthog/ai/node_modules/@ai-sdk
-        rm -rf node_modules/@posthog/ai/node_modules/ai
-    fi
-    
 elif [ -n "$POSTHOG_JS_AI_VERSION" ] || [ -n "$POSTHOG_JS_NODE_VERSION" ]; then
     echo -e "${YELLOW}📦 Installing specific PostHog versions${NC}"
     
