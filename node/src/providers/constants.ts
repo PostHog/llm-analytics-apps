@@ -16,6 +16,7 @@ export const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
 
 // Google Gemini Models
 export const GEMINI_MODEL = "gemini-2.5-flash";
+export const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 
 // Default API Parameters
 export const DEFAULT_MAX_TOKENS = 1000;

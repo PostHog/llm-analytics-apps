@@ -20,6 +20,8 @@ import { VercelAIProvider } from './providers/vercel-ai.js';
 import { VercelAIStreamingProvider } from './providers/vercel-ai-streaming.js';
 import { VercelAIAnthropicProvider } from './providers/vercel-ai-anthropic.js';
 import { VercelAIAnthropicStreamingProvider } from './providers/vercel-ai-anthropic-streaming.js';
+import { VercelAIGoogleProvider } from './providers/vercel-ai-google.js';
+import { VercelAIGoogleStreamingProvider } from './providers/vercel-ai-google-streaming.js';
 import { VercelGenerateObjectProvider } from './providers/vercel-generate-object.js';
 import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js';
 import { MastraProvider } from './providers/mastra.js';
@@ -81,7 +83,8 @@ async function selectMode(): Promise<string> {
     ['4', 'Image Test'],
     ['5', 'Embeddings Test'],
     ['6', 'Structured Output Test (Vercel only)'],
-    ['7', 'Transcription Test (OpenAI only)']
+    ['7', 'Transcription Test (OpenAI only)'],
+    ['8', 'Image Generation Test (Vercel AI SDK)']
   ]);
 
   console.log('\nSelect Mode:');
@@ -101,22 +104,24 @@ async function selectMode(): Promise<string> {
       console.log(`  ${key}. ${name} (Auto-test: Generate structured data)`);
     } else if (key === '7') {
       console.log(`  ${key}. ${name} (Auto-test: Transcribe audio)`);
+    } else if (key === '8') {
+      console.log(`  ${key}. ${name} (Auto-test: Generate image from prompt)`);
     }
   }
   console.log('='.repeat(50));
 
   return new Promise((resolve) => {
     const askForMode = () => {
-      rl.question('\nSelect a mode (1-7) or \'q\' to quit: ', (choice) => {
+      rl.question('\nSelect a mode (1-8) or \'q\' to quit: ', (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (choice === 'q') {
           console.log('\n👋 Goodbye!');
           cleanup();
         } else {
-          console.log('❌ Invalid choice. Please select 1-7.');
+          console.log('❌ Invalid choice. Please select 1-8.');
           askForMode();
         }
       });
@@ -142,7 +147,9 @@ function displayProviders(mode?: string): Map<string, string> {
     ['13', 'Vercel streamObject (OpenAI)'],
     ['14', 'Vercel AI SDK (Anthropic)'],
     ['15', 'Vercel AI SDK Streaming (Anthropic)'],
-    ['17', 'Mastra (OpenAI) - Manual Instrumentation']
+    ['17', 'Mastra (OpenAI) - Manual Instrumentation'],
+    ['18', 'Vercel AI SDK (Google)'],
+    ['19', 'Vercel AI SDK Streaming (Google)']
   ]);
 
   // Filter providers for embeddings mode
@@ -173,6 +180,15 @@ function displayProviders(mode?: string): Map<string, string> {
     ]);
   }
 
+  // Filter providers for image generation mode
+  if (mode === '8') {
+    // Only Vercel AI Google providers support image generation
+    providers = new Map<string, string>([
+      ['18', 'Vercel AI SDK (Google)'],
+      ['19', 'Vercel AI SDK Streaming (Google)']
+    ]);
+  }
+
   console.log('\nAvailable AI Providers:');
   console.log('='.repeat(50));
   for (const [key, name] of providers) {
@@ -186,7 +202,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-17)';
+      let prompt = '\nSelect a provider (1-19)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -197,7 +213,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -284,6 +300,10 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new OpenAITranscriptionProvider(posthog, aiSessionId);
     case '17':
       return new MastraProvider(posthog, aiSessionId);
+    case '18':
+      return new VercelAIGoogleProvider(posthog, aiSessionId);
+    case '19':
+      return new VercelAIGoogleStreamingProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -551,6 +571,40 @@ async function runTranscriptionTest(provider: any): Promise<{ success: boolean; 
   }
 }
 
+async function runImageGenerationTest(provider: any): Promise<{ success: boolean; error: string | null }> {
+  const testPrompt = 'A serene mountain landscape at sunset with a lake reflection';
+
+  console.log(`\nImage Generation Test: ${provider.getName()}`);
+  console.log('-'.repeat(50));
+  console.log(`Prompt: "${testPrompt}"`);
+  console.log();
+
+  // Check if provider supports image generation
+  if (!provider.generateImage || typeof provider.generateImage !== 'function') {
+    console.log(`❌ ${provider.getName()} does not support image generation`);
+    return { success: false, error: 'Provider does not support image generation' };
+  }
+
+  try {
+    // Generate the image
+    const imageUrl = await provider.generateImage(testPrompt);
+
+    if (imageUrl) {
+      console.log(`✅ Generated image successfully`);
+      console.log(`\nImage result:`);
+      console.log(imageUrl);
+      console.log();
+      return { success: true, error: null };
+    } else {
+      console.log(`❌ Failed to generate image`);
+      return { success: false, error: 'No image returned' };
+    }
+  } catch (error: any) {
+    logError(error);
+    return { success: false, error: error.message };
+  }
+}
+
 async function runAllTests(mode: string): Promise<void> {
   let providersInfo: Array<[string, string]> = [
     ['1', 'Anthropic'],
@@ -581,13 +635,23 @@ async function runAllTests(mode: string): Promise<void> {
       ['13', 'Vercel streamObject (OpenAI)']
     ];
   }
-  
+
+  // Filter providers for image generation test (only those that support it)
+  if (mode === '8') {
+    // Only Vercel AI Google providers support image generation
+    providersInfo = [
+      ['18', 'Vercel AI SDK (Google)'],
+      ['19', 'Vercel AI SDK Streaming (Google)']
+    ];
+  }
+
   const testName = mode === '2' ? 'Tool Call Test' :
                    mode === '3' ? 'Message Test' :
                    mode === '4' ? 'Image Test' :
                    mode === '5' ? 'Embeddings Test' :
                    mode === '6' ? 'Structured Output Test' :
-                   mode === '7' ? 'Transcription Test' : 'Unknown Test';
+                   mode === '7' ? 'Transcription Test' :
+                   mode === '8' ? 'Image Generation Test' : 'Unknown Test';
   console.log(`\n🔄 Running ${testName} on all providers...`);
   console.log('='.repeat(60));
   console.log();
@@ -620,6 +684,8 @@ async function runAllTests(mode: string): Promise<void> {
         ? await runStructuredOutputTest(provider)
         : mode === '7'
         ? await runTranscriptionTest(provider)
+        : mode === '8'
+        ? await runImageGenerationTest(provider)
         : { success: false, error: 'Unknown test mode' };
       
       results.push({
@@ -678,8 +744,8 @@ async function main(): Promise<void> {
     displayProviders(mode);
 
     // Allow mode change for all modes, 'all' option only for test modes
-    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7');
-    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7');
+    const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7' || mode === '8');
+    const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7' || mode === '8');
     const choice = await getProviderChoice(allowModeChange, allowAll);
     
     // Check if user wants to change mode
@@ -755,6 +821,12 @@ async function main(): Promise<void> {
     } else if (mode === '7') {
       // Transcription Test - run test and loop back
       const result = await runTranscriptionTest(provider);
+      if (!result.error) {
+        console.log();
+      }
+    } else if (mode === '8') {
+      // Image Generation Test - run test and loop back
+      const result = await runImageGenerationTest(provider);
       if (!result.error) {
         console.log();
       }
