@@ -20,10 +20,13 @@ langchain-openai
 openai
 
 # LiteLLM
-litellm
+litellm>=1.80.0
 
 # OpenTelemetry
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
 opentelemetry-instrumentation-openai
+
+# Pydantic AI
+pydantic-ai
