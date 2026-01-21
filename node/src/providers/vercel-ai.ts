@@ -1,10 +1,10 @@
 import { withTracing } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
-import { generateText } from 'ai';
+import { generateText, generateImage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { BaseProvider, Message, Tool } from './base.js';
-import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, OPENAI_IMAGE_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIProvider extends BaseProvider {
   private openaiClient: any;
@@ -33,6 +33,37 @@ export class VercelAIProvider extends BaseProvider {
 
   getName(): string {
     return 'Vercel AI SDK (OpenAI)';
+  }
+
+  async generateImage(prompt: string, model: string = OPENAI_IMAGE_MODEL): Promise<string> {
+    try {
+      // Note: withTracing doesn't work with image models (expects messages array)
+      // Using the image model directly without tracing for now
+      const imageModel = this.openaiClient.image(model);
+
+      const result = await generateImage({
+        model: imageModel,
+        prompt: prompt,
+      });
+
+      this.debugApiCall("Vercel AI SDK Image Generation (OpenAI)", { model, prompt }, result);
+
+      // OpenAI returns images in result.images array
+      if (result.images && result.images.length > 0) {
+        const image = result.images[0];
+        // Image can be base64 or URL depending on response format
+        if (image.base64) {
+          return `data:image/png;base64,${image.base64.substring(0, 100)}... (base64 image data, ${image.base64.length} chars total)`;
+        } else if (image.uint8Array) {
+          const b64 = Buffer.from(image.uint8Array).toString('base64');
+          return `data:image/png;base64,${b64.substring(0, 100)}... (base64 image data, ${b64.length} chars total)`;
+        }
+      }
+      return "";
+    } catch (error: any) {
+      console.error('Error in Vercel AI OpenAI image generation:', error);
+      throw new Error(`Vercel AI OpenAI Image Generation error: ${error.message}`);
+    }
   }
 
   async chat(userInput: string, base64Image?: string): Promise<string> {
