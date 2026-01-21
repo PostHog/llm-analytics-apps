@@ -35,6 +35,50 @@ export class VercelAIGoogleProvider extends BaseProvider {
     return 'Vercel AI SDK (Google)';
   }
 
+  private logTokenUsageByModality(result: any): void {
+    if (!this.debugMode) return;
+
+    try {
+      // Extract from the raw response body
+      const usageMetadata = result?.steps?.[0]?.response?.body?.usageMetadata;
+      if (!usageMetadata) {
+        console.log("\n📊 Token Usage: No modality breakdown available\n");
+        return;
+      }
+
+      console.log("\n" + "─".repeat(60));
+      console.log("📊 TOKEN USAGE BY MODALITY");
+      console.log("─".repeat(60));
+
+      // Input tokens breakdown
+      const promptDetails = usageMetadata.promptTokensDetails || [];
+      console.log("\n  INPUT TOKENS:");
+      if (promptDetails.length > 0) {
+        for (const detail of promptDetails) {
+          console.log(`    ${detail.modality}: ${detail.tokenCount} tokens`);
+        }
+      } else {
+        console.log(`    Total: ${usageMetadata.promptTokenCount || 0} tokens`);
+      }
+
+      // Output tokens breakdown
+      const candidatesDetails = usageMetadata.candidatesTokensDetails || [];
+      console.log("\n  OUTPUT TOKENS:");
+      if (candidatesDetails.length > 0) {
+        for (const detail of candidatesDetails) {
+          console.log(`    ${detail.modality}: ${detail.tokenCount} tokens`);
+        }
+      } else {
+        console.log(`    Total: ${usageMetadata.candidatesTokenCount || 0} tokens`);
+      }
+
+      console.log("\n  TOTAL: " + (usageMetadata.totalTokenCount || 0) + " tokens");
+      console.log("─".repeat(60) + "\n");
+    } catch (e) {
+      // Silently ignore errors in debug logging
+    }
+  }
+
   async generateImage(prompt: string, model: string = GEMINI_IMAGE_MODEL): Promise<string> {
     try {
       // Gemini 2.5 Flash Image uses generateText with multimodal output
@@ -53,6 +97,7 @@ export class VercelAIGoogleProvider extends BaseProvider {
       });
 
       this.debugApiCall("Vercel AI SDK Image Generation (Google)", { model, prompt }, result);
+      this.logTokenUsageByModality(result);
 
       // Generated images are returned in result.files array
       if (result.files && result.files.length > 0) {
