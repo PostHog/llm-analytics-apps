@@ -83,7 +83,7 @@ if [ -n "$POSTHOG_JS_PATH" ]; then
 
     # Install/update local packages without saving to package.json
     echo -e "${YELLOW}🔄 Installing local PostHog packages...${NC}"
-    npm install --no-save "$POSTHOG_AI_DIR" "$POSTHOG_NODE_DIR"
+    npm install --no-save --force "$POSTHOG_AI_DIR" "$POSTHOG_NODE_DIR"
 
 elif [ -n "$POSTHOG_JS_AI_VERSION" ] || [ -n "$POSTHOG_JS_NODE_VERSION" ]; then
     echo -e "${YELLOW}📦 Installing specific PostHog versions${NC}"
@@ -114,7 +114,7 @@ elif [ -n "$POSTHOG_JS_AI_VERSION" ] || [ -n "$POSTHOG_JS_NODE_VERSION" ]; then
         PACKAGES="$PACKAGES posthog-node"
     fi
     
-    npm install --no-save $PACKAGES
+    npm install --no-save --force $PACKAGES
     
 else
     # Standard installation from package.json
