@@ -1,10 +1,10 @@
 import { withTracing } from '@posthog/ai';
 import { PostHog } from 'posthog-node';
-import { streamText, generateText } from 'ai';
+import { streamText } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { StreamingProvider, Message, Tool } from './base.js';
-import { GEMINI_MODEL, GEMINI_IMAGE_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
+import { GEMINI_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_POSTHOG_DISTINCT_ID, SYSTEM_PROMPT_FRIENDLY } from './constants.js';
 
 export class VercelAIGoogleStreamingProvider extends StreamingProvider {
   private googleClient: any;
@@ -33,42 +33,6 @@ export class VercelAIGoogleStreamingProvider extends StreamingProvider {
 
   getName(): string {
     return 'Vercel AI SDK Streaming (Google)';
-  }
-
-  async generateImage(prompt: string, model: string = GEMINI_IMAGE_MODEL): Promise<string> {
-    try {
-      // Gemini 2.5 Flash Image uses generateText with multimodal output
-      const tracedModel = withTracing(this.googleClient(model), this.posthogClient, {
-        posthogDistinctId: process.env.POSTHOG_DISTINCT_ID || DEFAULT_POSTHOG_DISTINCT_ID,
-        posthogPrivacyMode: false,
-        posthogProperties: {
-          $ai_span_name: "vercel_ai_generate_image_google_streaming",
-          ...this.getPostHogProperties(),
-        },
-      });
-
-      const result = await generateText({
-        model: tracedModel,
-        prompt: prompt,
-      });
-
-      this.debugApiCall("Vercel AI SDK Image Generation (Google)", { model, prompt }, result);
-
-      // Generated images are returned in result.files array
-      if (result.files && result.files.length > 0) {
-        for (const file of result.files) {
-          if (file.mediaType?.startsWith('image/')) {
-            // Convert Uint8Array to base64
-            const b64 = Buffer.from(file.uint8Array).toString('base64');
-            return `data:${file.mediaType};base64,${b64.substring(0, 100)}... (base64 image data, ${b64.length} chars total)`;
-          }
-        }
-      }
-      return "";
-    } catch (error: any) {
-      console.error('Error in Vercel AI Google image generation:', error);
-      throw new Error(`Vercel AI Google Image Generation error: ${error.message}`);
-    }
   }
 
   async *chatStream(
