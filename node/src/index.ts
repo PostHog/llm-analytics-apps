@@ -16,6 +16,8 @@ import { OpenAIChatProvider } from './providers/openai-chat.js';
 import { OpenAIChatStreamingProvider } from './providers/openai-chat-streaming.js';
 import { OpenAIStreamingProvider } from './providers/openai-streaming.js';
 import { OpenAITranscriptionProvider } from './providers/openai-transcription.js';
+import { OpenAIImageProvider } from './providers/openai-image.js';
+import { GeminiImageProvider } from './providers/gemini-image.js';
 import { VercelAIProvider } from './providers/vercel-ai.js';
 import { VercelAIStreamingProvider } from './providers/vercel-ai-streaming.js';
 import { VercelAIAnthropicProvider } from './providers/vercel-ai-anthropic.js';
@@ -149,7 +151,9 @@ function displayProviders(mode?: string): Map<string, string> {
     ['15', 'Vercel AI SDK Streaming (Anthropic)'],
     ['17', 'Mastra (OpenAI) - Manual Instrumentation'],
     ['18', 'Vercel AI SDK (Google)'],
-    ['19', 'Vercel AI SDK Streaming (Google)']
+    ['19', 'Vercel AI SDK Streaming (Google)'],
+    ['20', 'OpenAI Responses (Image Generation)'],
+    ['21', 'Google Gemini (Image Generation)']
   ]);
 
   // Filter providers for embeddings mode
@@ -182,10 +186,12 @@ function displayProviders(mode?: string): Map<string, string> {
 
   // Filter providers for image generation mode
   if (mode === '8') {
-    // Only Vercel AI Google providers support image generation
+    // Providers that support image generation
     providers = new Map<string, string>([
+      ['10', 'Vercel AI SDK (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
-      ['19', 'Vercel AI SDK Streaming (Google)']
+      ['20', 'OpenAI Responses (Image Generation)'],
+      ['21', 'Google Gemini (Image Generation)']
     ]);
   }
 
@@ -202,7 +208,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-19)';
+      let prompt = '\nSelect a provider (1-21)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -213,7 +219,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -304,6 +310,10 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelAIGoogleProvider(posthog, aiSessionId);
     case '19':
       return new VercelAIGoogleStreamingProvider(posthog, aiSessionId);
+    case '20':
+      return new OpenAIImageProvider(posthog, aiSessionId);
+    case '21':
+      return new GeminiImageProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -638,10 +648,12 @@ async function runAllTests(mode: string): Promise<void> {
 
   // Filter providers for image generation test (only those that support it)
   if (mode === '8') {
-    // Only Vercel AI Google providers support image generation
+    // Providers that support image generation
     providersInfo = [
+      ['10', 'Vercel AI SDK (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
-      ['19', 'Vercel AI SDK Streaming (Google)']
+      ['20', 'OpenAI Responses (Image Generation)'],
+      ['21', 'Google Gemini (Image Generation)']
     ];
   }
 
