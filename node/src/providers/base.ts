@@ -202,10 +202,29 @@ export abstract class BaseProvider {
       return;
     }
 
+    // Redact base64 data from strings
+    const redactBase64 = (value: string): string => {
+      // Check for data URI with base64 (e.g., data:image/png;base64,...)
+      const dataUriMatch = value.match(/^(data:[^;]+;base64,)(.{50,})/);
+      if (dataUriMatch) {
+        const prefix = dataUriMatch[1];
+        const base64Data = dataUriMatch[2];
+        return `${prefix}[REDACTED: ${base64Data.length} chars]`;
+      }
+      // Check for standalone base64 that looks like image data (long alphanumeric string)
+      if (value.length > 500 && /^[A-Za-z0-9+/=]+$/.test(value)) {
+        return `[REDACTED BASE64: ${value.length} chars]`;
+      }
+      return value;
+    };
+
     // Convert objects to plain objects for JSON serialization
     const toPlainObject = (obj: any): any => {
       if (obj === null || obj === undefined) {
         return obj;
+      }
+      if (typeof obj === "string") {
+        return redactBase64(obj);
       }
       if (typeof obj !== "object") {
         return obj;
@@ -213,9 +232,13 @@ export abstract class BaseProvider {
       if (Array.isArray(obj)) {
         return obj.map(toPlainObject);
       }
+      // Handle Uint8Array (binary data like images)
+      if (obj instanceof Uint8Array) {
+        return `[REDACTED BINARY: ${obj.length} bytes]`;
+      }
       // Try to convert to plain object
       if (obj.toJSON) {
-        return obj.toJSON();
+        return toPlainObject(obj.toJSON());
       }
       // For regular objects, recursively convert
       const result: any = {};

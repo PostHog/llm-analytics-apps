@@ -4,9 +4,10 @@
   "description": "Unified AI Chatbot - Supports multiple LLM providers: Anthropic, Gemini, LangChain, and OpenAI",
   "type": "module",
   "main": "dist/index.js",
+  "packageManager": "pnpm@10.23.0",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build && node dist/index.js",
+    "start": "pnpm build && node dist/index.js",
     "dev": "ts-node src/index.ts",
     "clean": "rm -rf dist"
   },
@@ -21,25 +22,25 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.39",
-    "@ai-sdk/openai": "^2.0.4",
-    "@ai-sdk/provider-utils": "^3.0.1",
-    "@anthropic-ai/sdk": "^0.27.0",
-    "@google/genai": "^1.11.0",
-    "@langchain/core": "^0.3.66",
-    "@langchain/openai": "^0.3.14",
-    "@mastra/core": "^0.24.1",
-    "@posthog/ai": "^6.6.0",
-    "ai": "^5.0.42",
-    "dotenv": "^16.4.5",
-    "langchain": "^0.3.30",
-    "openai": "^4.0.0",
-    "posthog-node": "^5.11.2",
+    "@ai-sdk/anthropic": "^3.0.18",
+    "@ai-sdk/google": "^3.0.10",
+    "@ai-sdk/openai": "^3.0.14",
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@google/genai": "^1.38.0",
+    "@langchain/core": "^0.3.80",
+    "@langchain/openai": "^0.3.17",
+    "@mastra/core": "^0.24.9",
+    "@posthog/ai": "^7.5.3",
+    "ai": "^6.0.45",
+    "dotenv": "^16.6.1",
+    "langchain": "^0.3.37",
+    "openai": "^4.104.0",
+    "posthog-node": "^5.24.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "@types/node": "^25.0.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
