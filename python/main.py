@@ -22,6 +22,7 @@ from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
 from providers.openai_otel import OpenAIOtelProvider
 from providers.openai_transcription import OpenAITranscriptionProvider
+from openai_agents.runner import OpenAIAgentsRunner
 
 # Load environment variables from parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -117,6 +118,7 @@ def display_providers(mode=None):
         "11": "LiteLLM (Async)",
         "12": "OpenAI with OpenTelemetry",
         "13": "OpenAI Transcriptions with Whisper"
+        "14": "OpenAI Agents SDK"
     }
 
     # Filter providers for embeddings mode
@@ -244,6 +246,8 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return OpenAIOtelProvider(posthog)
     elif choice == "13":
         return OpenAITranscriptionProvider(posthog)
+    elif choice == "14":
+        return OpenAIAgentsRunner(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -458,7 +462,8 @@ def run_all_tests(mode):
         ("8", "OpenAI Chat Completions"),
         ("9", "OpenAI Chat Completions Streaming"),
         ("10", "LiteLLM (Sync)"),
-        ("11", "LiteLLM (Async)")
+        ("11", "LiteLLM (Async)"),
+        ("13", "OpenAI Agents SDK")
     ]
 
     # Filter providers for embeddings test (only those that support it)
@@ -491,7 +496,7 @@ def run_all_tests(mode):
     results = []
 
     for provider_id, provider_name in providers_info:
-        print(f"[{provider_id}/11] Testing {provider_name}...")
+        print(f"[{provider_id}/{len(providers_info)}] Testing {provider_name}...")
         
         try:
             # For automated tests, don't enable thinking by default
@@ -588,6 +593,10 @@ def main():
             if enable_thinking:
                 status_msg += f" (Thinking: enabled, budget: {thinking_budget})"
             print(status_msg)
+
+            # Show mode selection for OpenAI Agents SDK
+            if choice == "13" and hasattr(provider, 'prompt_mode_selection'):
+                provider.prompt_mode_selection()
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
             continue

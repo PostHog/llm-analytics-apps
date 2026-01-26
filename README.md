@@ -9,7 +9,7 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
 - pip package manager
 
 ### For Node.js:
-- Node.js 16 or higher
+- Node.js 24 or higher
 - npm package manager
 
 ## ⚙️ Setup
