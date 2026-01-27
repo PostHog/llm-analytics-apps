@@ -10,12 +10,14 @@ default settings in one place.
 OPENAI_CHAT_MODEL = "gpt-5-mini"
 OPENAI_VISION_MODEL = "gpt-4o"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+OPENAI_IMAGE_MODEL = "gpt-image-1-mini"
 
 # Anthropic Models
 ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929"
 
 # Google Gemini Models
 GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
 
 # Default API Parameters
 DEFAULT_MAX_TOKENS = 1000

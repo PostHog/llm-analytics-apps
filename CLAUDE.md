@@ -100,6 +100,7 @@ npm run clean    # Remove dist/ directory
 - Image Test - Image description capabilities test
 - Embeddings Test - Embedding generation (OpenAI only)
 - Transcription Test - Audio transcription (OpenAI only)
+- Image Generation Test - Image generation (OpenAI and Gemini)
 - Structured Output Test - Structured data generation (Vercel AI only, Node.js)
 
 **Test Scripts:**
@@ -171,6 +172,7 @@ All provider implementations inherit from these base classes and implement:
 - `gemini.py` / `gemini_streaming.py`
 - `openai.py` / `openai_chat.py` / `openai_streaming.py` / `openai_chat_streaming.py`
 - `openai_transcription.py`
+- `openai_image.py` / `gemini_image.py`
 - `langchain.py`
 - `litellm_provider.py`
 
@@ -178,8 +180,9 @@ All provider implementations inherit from these base classes and implement:
 - `anthropic.ts` / `anthropic-streaming.ts`
 - `gemini.ts` / `gemini-streaming.ts`
 - `openai.ts` / `openai-chat.ts` / `openai-streaming.ts` / `openai-chat-streaming.ts`
+- `openai-image.ts` / `gemini-image.ts`
 - `langchain.ts`
-- `vercel-ai.ts` / `vercel-ai-streaming.ts`
+- `vercel-ai.ts` / `vercel-ai-streaming.ts` / `vercel-ai-google.ts`
 - `vercel-generate-object.ts` / `vercel-stream-object.ts`
 
 ### PostHog Integration
@@ -198,7 +201,8 @@ Both implementations support identical test modes via CLI menu:
 3. **Message Test**: Simple greeting test
 4. **Image Test**: Image description capabilities test
 5. **Embeddings Test**: Embedding generation (OpenAI only)
-6. **Structured Output Test**: Structured data generation (Node.js Vercel AI only)
+6. **Image Generation Test**: Image generation (OpenAI and Gemini)
+7. **Structured Output Test**: Structured data generation (Node.js Vercel AI only)
 
 ### Anthropic Extended Thinking
 

@@ -22,6 +22,8 @@ from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
 from providers.openai_otel import OpenAIOtelProvider
 from providers.openai_transcription import OpenAITranscriptionProvider
+from providers.openai_image import OpenAIImageProvider
+from providers.gemini_image import GeminiImageProvider
 from openai_agents.runner import OpenAIAgentsRunner
 
 # Load environment variables from parent directory
@@ -67,7 +69,8 @@ def select_mode():
         "3": "Message Test",
         "4": "Image Test",
         "5": "Embeddings Test",
-        "6": "Transcription Test"
+        "6": "Transcription Test",
+        "7": "Image Generation Test"
     }
 
     print("\nSelect Mode:")
@@ -85,19 +88,21 @@ def select_mode():
             print(f"  {key}. {name} (Auto-test: Generate embeddings)")
         elif key == "6":
             print(f"  {key}. {name} (Auto-test: Transcribe audio)")
+        elif key == "7":
+            print(f"  {key}. {name} (Auto-test: Generate image)")
     print("=" * 50)
 
     while True:
         try:
-            choice = input("\nSelect a mode (1-6) or 'q' to quit: ").strip().lower()
-            if choice in ["1", "2", "3", "4", "5", "6"]:
+            choice = input("\nSelect a mode (1-7) or 'q' to quit: ").strip().lower()
+            if choice in ["1", "2", "3", "4", "5", "6", "7"]:
                 clear_screen()
                 return choice
             elif choice == "q":
                 print("\n👋 Goodbye!")
                 exit(0)
             else:
-                print("❌ Invalid choice. Please select 1, 2, 3, 4, 5, or 6.")
+                print("❌ Invalid choice. Please select 1, 2, 3, 4, 5, 6, or 7.")
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
             exit(0)
@@ -118,7 +123,9 @@ def display_providers(mode=None):
         "11": "LiteLLM (Async)",
         "12": "OpenAI with OpenTelemetry",
         "13": "OpenAI Transcriptions with Whisper",
-        "14": "OpenAI Agents SDK"
+        "14": "OpenAI Agents SDK",
+        "15": "OpenAI Responses (Image Generation)",
+        "16": "Google Gemini (Image Generation)"
     }
 
     # Filter providers for embeddings mode
@@ -132,12 +139,18 @@ def display_providers(mode=None):
             "10": "LiteLLM (Sync)",
             "11": "LiteLLM (Async)"
         }
-
     # Filter providers for transcription mode
-    if mode == "6":
+    elif mode == "6":
         # Only OpenAI Transcription provider supports audio transcription
         providers = {
             "13": "OpenAI Transcriptions - Whisper"
+        }
+    # Filter providers for image generation mode
+    elif mode == "7":
+        # Only image generation providers
+        providers = {
+            "15": "OpenAI Responses (Image Generation)",
+            "16": "Google Gemini (Image Generation)"
         }
 
     print("\nAvailable AI Providers:")
@@ -151,8 +164,8 @@ def display_providers(mode=None):
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]
-    
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"]
+
     # Build prompt based on valid choices
     if len(valid_choices) == 1:
         prompt = f"\nSelect a provider ({valid_choices[0]})"
@@ -161,14 +174,14 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-13)"
-    
+        prompt = "\nSelect a provider (1-16)"
+
     if allow_all:
         prompt += ", 'a' for all providers"
     if allow_mode_change:
         prompt += ", or 'm' to change mode"
     prompt += ": "
-    
+
     while True:
         try:
             choice = input(prompt).strip().lower()
@@ -248,6 +261,10 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return OpenAITranscriptionProvider(posthog)
     elif choice == "14":
         return OpenAIAgentsRunner(posthog)
+    elif choice == "15":
+        return OpenAIImageProvider(posthog)
+    elif choice == "16":
+        return GeminiImageProvider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -374,22 +391,22 @@ def run_embeddings_test(provider):
     test_texts = [
         "The quick brown fox jumps over the lazy dog."
     ]
-    
+
     print(f'\nEmbeddings Test: {provider.get_name()}')
     print('-' * 50)
-    
+
     # Check if provider supports embeddings
     if not hasattr(provider, 'embed'):
         print(f'❌ {provider.get_name()} does not support embeddings')
         return False, "Provider does not support embeddings"
-    
+
     try:
         for i, text in enumerate(test_texts, 1):
             print(f'\nTest {i}: "{text}"')
-            
+
             # Generate embeddings
             embedding = provider.embed(text)
-            
+
             if embedding:
                 print(f'✅ Generated embedding with {len(embedding)} dimensions')
                 # Show first 5 values as sample
@@ -397,10 +414,42 @@ def run_embeddings_test(provider):
             else:
                 print('❌ Failed to generate embedding')
                 return False, f"Failed to generate embedding for text {i}"
-        
+
         print()
         return True, None
-        
+
+    except Exception as error:
+        print(f'❌ Error: {str(error)}')
+        return False, str(error)
+
+def run_image_generation_test(provider):
+    """Run automated image generation test"""
+    test_prompt = "A serene mountain landscape at sunset with a crystal clear lake reflecting the sky"
+
+    print(f'\nImage Generation Test: {provider.get_name()}')
+    print('-' * 50)
+    print(f'Prompt: "{test_prompt}"')
+    print()
+
+    # Check if provider supports image generation
+    if not hasattr(provider, 'generate_image'):
+        print(f'❌ {provider.get_name()} does not support image generation')
+        return False, "Provider does not support image generation"
+
+    try:
+        # Generate image
+        image_url = provider.generate_image(test_prompt)
+
+        if image_url:
+            print(f'✅ Image generated successfully')
+            print(f'   {image_url}')
+        else:
+            print(f'❌ Failed to generate image')
+            return False, "Failed to generate image"
+
+        print()
+        return True, None
+
     except Exception as error:
         print(f'❌ Error: {str(error)}')
         return False, str(error)
@@ -463,7 +512,7 @@ def run_all_tests(mode):
         ("9", "OpenAI Chat Completions Streaming"),
         ("10", "LiteLLM (Sync)"),
         ("11", "LiteLLM (Async)"),
-        ("13", "OpenAI Agents SDK")
+        ("14", "OpenAI Agents SDK")
     ]
 
     # Filter providers for embeddings test (only those that support it)
@@ -477,7 +526,14 @@ def run_all_tests(mode):
             ("10", "LiteLLM (Sync)"),
             ("11", "LiteLLM (Async)")
         ]
-    
+    # Filter providers for image generation test
+    elif mode == "7":
+        # Only image generation providers
+        providers_info = [
+            ("15", "OpenAI Responses (Image Generation)"),
+            ("16", "Google Gemini (Image Generation)")
+        ]
+
     if mode == "2":
         test_name = "Tool Call Test"
     elif mode == "3":
@@ -486,22 +542,26 @@ def run_all_tests(mode):
         test_name = "Image Test"
     elif mode == "5":
         test_name = "Embeddings Test"
+    elif mode == "6":
+        test_name = "Transcription Test"
+    elif mode == "7":
+        test_name = "Image Generation Test"
     else:
         test_name = "Unknown Test"
-    
+
     print(f"\n🔄 Running {test_name} on all providers...")
     print("=" * 60)
     print()
-    
+
     results = []
 
     for provider_id, provider_name in providers_info:
         print(f"[{provider_id}/{len(providers_info)}] Testing {provider_name}...")
-        
+
         try:
             # For automated tests, don't enable thinking by default
             provider = create_provider(provider_id, False, None)
-            
+
             # Run the appropriate test
             if mode == "2":
                 success, error = run_tool_call_test(provider)
@@ -511,15 +571,19 @@ def run_all_tests(mode):
                 success, error = run_image_test(provider)
             elif mode == "5":
                 success, error = run_embeddings_test(provider)
+            elif mode == "6":
+                success, error = run_transcription_test(provider)
+            elif mode == "7":
+                success, error = run_image_generation_test(provider)
             else:
                 success, error = False, "Unknown test mode"
-            
+
             results.append({
                 "name": provider_name,
                 "success": success,
                 "error": error
             })
-            
+
         except Exception as init_error:
             print(f"   ❌ Failed to initialize: {str(init_error)}")
             results.append({
@@ -527,25 +591,25 @@ def run_all_tests(mode):
                 "success": False,
                 "error": f"Initialization failed: {str(init_error)}"
             })
-    
+
     # Print summary
     print("\n" + "=" * 60)
     print(f"📊 {test_name} Summary")
     print("=" * 60)
-    
+
     successful = [r for r in results if r["success"]]
     failed = [r for r in results if not r["success"]]
-    
+
     print(f"\n✅ Successful: {len(successful)}/{len(results)}")
     for result in successful:
         print(f"   • {result['name']}")
-    
+
     if failed:
         print(f"\n❌ Failed: {len(failed)}/{len(results)}")
         for result in failed:
             print(f"   • {result['name']}")
             print(f"     Error: {result['error']}")
-    
+
     print("=" * 60)
     print()
 
@@ -565,8 +629,8 @@ def main():
         providers = display_providers(mode)
         
         # Allow mode change for all modes, 'all' option only for test modes (not transcription - only 1 provider)
-        allow_mode_change = (mode in ["1", "2", "3", "4", "5", "6"])
-        allow_all = (mode in ["2", "3", "4", "5"])
+        allow_mode_change = (mode in ["1", "2", "3", "4", "5", "6", "7"])
+        allow_all = (mode in ["2", "3", "4", "5", "6", "7"])
         valid_choices = list(providers.keys())
         choice = get_provider_choice(allow_mode_change=allow_mode_change, allow_all=allow_all, valid_choices=valid_choices)
         
@@ -595,7 +659,7 @@ def main():
             print(status_msg)
 
             # Show mode selection for OpenAI Agents SDK
-            if choice == "13" and hasattr(provider, 'prompt_mode_selection'):
+            if choice == "14" and hasattr(provider, 'prompt_mode_selection'):
                 provider.prompt_mode_selection()
         except Exception as error:
             print(f"❌ Failed to initialize provider: {str(error)}")
@@ -629,6 +693,11 @@ def main():
         elif mode == "6":
             # Transcription Test - run test and loop back
             success, error = run_transcription_test(provider)
+            if not error:
+                print()
+        elif mode == "7":
+            # Image Generation Test - run test and loop back
+            success, error = run_image_generation_test(provider)
             if not error:
                 print()
 
