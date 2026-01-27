@@ -52,26 +52,37 @@ class OpenAITranscriptionProvider(BaseProvider):
         Returns:
             Transcription text
         """
-        with open(audio_path, "rb") as audio_file:
-            transcription_params = {
-                "file": audio_file,
-                "model": model
-            }
+        # Validate file exists
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-            # Add optional parameters
-            if language:
-                transcription_params["language"] = language
-            if prompt:
-                transcription_params["prompt"] = prompt
+        try:
+            with open(audio_path, "rb") as audio_file:
+                transcription_params = {
+                    "file": audio_file,
+                    "model": model,
+                    "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                }
 
-            transcription = self.client.audio.transcriptions.create(**transcription_params)
+                # Add optional parameters
+                if language:
+                    transcription_params["language"] = language
+                if prompt:
+                    transcription_params["prompt"] = prompt
 
-            # Debug log (excluding file object for cleaner output)
-            debug_params = {k: v for k, v in transcription_params.items() if k != "file"}
-            debug_params["file"] = audio_path
-            self._debug_api_call("OpenAI Transcription", debug_params, transcription)
+                transcription = self.client.audio.transcriptions.create(**transcription_params)
 
-            return transcription.text if hasattr(transcription, 'text') else str(transcription)
+                # Debug log (excluding file object for cleaner output)
+                debug_params = {k: v for k, v in transcription_params.items() if k != "file"}
+                debug_params["file"] = audio_path
+                self._debug_api_call("OpenAI Transcription", debug_params, transcription)
+
+                return transcription.text if hasattr(transcription, 'text') else str(transcription)
+        except FileNotFoundError:
+            raise
+        except Exception as error:
+            print(f"❌ Transcription error: {str(error)}")
+            raise
 
     def transcribe_verbose(
         self,
@@ -92,28 +103,38 @@ class OpenAITranscriptionProvider(BaseProvider):
         Returns:
             Verbose transcription with segments, language, duration
         """
-        with open(audio_path, "rb") as audio_file:
-            transcription_params = {
-                "file": audio_file,
-                "model": model,
-                "response_format": "verbose_json",
-                "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
-            }
+        # Validate file exists
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-            # Add optional parameters
-            if language:
-                transcription_params["language"] = language
-            if prompt:
-                transcription_params["prompt"] = prompt
+        try:
+            with open(audio_path, "rb") as audio_file:
+                transcription_params = {
+                    "file": audio_file,
+                    "model": model,
+                    "response_format": "verbose_json",
+                    "posthog_distinct_id": os.getenv("POSTHOG_DISTINCT_ID", DEFAULT_POSTHOG_DISTINCT_ID),
+                }
 
-            transcription = self.client.audio.transcriptions.create(**transcription_params)
+                # Add optional parameters
+                if language:
+                    transcription_params["language"] = language
+                if prompt:
+                    transcription_params["prompt"] = prompt
 
-            # Debug log (excluding file object for cleaner output)
-            debug_params = {k: v for k, v in transcription_params.items() if k != "file"}
-            debug_params["file"] = audio_path
-            self._debug_api_call("OpenAI Transcription (Verbose)", debug_params, transcription)
+                transcription = self.client.audio.transcriptions.create(**transcription_params)
 
-            return transcription
+                # Debug log (excluding file object for cleaner output)
+                debug_params = {k: v for k, v in transcription_params.items() if k != "file"}
+                debug_params["file"] = audio_path
+                self._debug_api_call("OpenAI Transcription (Verbose)", debug_params, transcription)
+
+                return transcription
+        except FileNotFoundError:
+            raise
+        except Exception as error:
+            print(f"❌ Transcription error: {str(error)}")
+            raise
 
     def chat(self, user_input: str, base64_image: Optional[str] = None) -> str:
         """This provider is for transcriptions only. Use transcribe() method instead."""

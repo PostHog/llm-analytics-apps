@@ -117,7 +117,7 @@ def display_providers(mode=None):
         "10": "LiteLLM (Sync)",
         "11": "LiteLLM (Async)",
         "12": "OpenAI with OpenTelemetry",
-        "13": "OpenAI Transcriptions with Whisper"
+        "13": "OpenAI Transcriptions with Whisper",
         "14": "OpenAI Agents SDK"
     }
 
@@ -351,7 +351,7 @@ def run_image_test(provider):
     print(f'\nImage Test: {provider.get_name()}')
     print('-' * 50)
     print(f'Query: "{test_query}"')
-    print(f'Image: 1x1 red pixel (base64 encoded)')
+    print('Image: 1x1 red pixel (base64 encoded)')
     print()
     
     try:
@@ -395,7 +395,7 @@ def run_embeddings_test(provider):
                 # Show first 5 values as sample
                 print(f'   Sample values: {embedding[:5]}...')
             else:
-                print(f'❌ Failed to generate embedding')
+                print('❌ Failed to generate embedding')
                 return False, f"Failed to generate embedding for text {i}"
         
         print()
@@ -434,12 +434,12 @@ def run_transcription_test(provider):
         transcription = provider.transcribe(audio_path)
 
         if transcription and len(transcription) > 0:
-            print(f'✅ Transcription successful')
-            print(f'\nTranscription text:')
+            print('✅ Transcription successful')
+            print('\nTranscription text:')
             print(f'"{transcription}"')
             print()
         else:
-            print(f'❌ Failed to transcribe audio')
+            print('❌ Failed to transcribe audio')
             return False, "Failed to generate transcription"
 
         return True, None
