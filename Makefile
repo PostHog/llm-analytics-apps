@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
+.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
 
 run-python:
 	@cd python && ./run.sh
@@ -17,6 +17,12 @@ run-trace-generator:
 
 run-trace-generator-debug:
 	@cd python/trace-generator && DEBUG=1 ./run.sh
+
+run-screenshot-demo:
+	@cd python/screenshot-demo && ./run.sh
+
+run-screenshot-demo-debug:
+	@cd python/screenshot-demo && DEBUG=1 ./run.sh
 
 ## Install Python deps only (don’t run app). Respects POSTHOG_PYTHON_PATH or POSTHOG_PYTHON_VERSION
 python-install:
