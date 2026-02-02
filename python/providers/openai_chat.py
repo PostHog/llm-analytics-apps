@@ -151,96 +151,77 @@ class OpenAIChatProvider(BaseProvider):
 
         # Collect response parts for display
         display_parts = []
-        assistant_content = ""
-        
+
         # Extract response from Chat Completions format
         choice = response.choices[0]
         message = choice.message
-        
+
         # Handle text content
-        if message.content:
-            assistant_content = message.content
-            display_parts.append(message.content)
-        
-        # Handle tool calls
+        assistant_content = message.content or ""
+        if assistant_content:
+            display_parts.append(assistant_content)
+
+        # Build and add assistant message to conversation history ONCE
+        # This must happen before processing tool calls for proper history
+        if message.tool_calls:
+            # Assistant message with tool calls
+            assistant_message = {
+                "role": "assistant",
+                "content": assistant_content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in message.tool_calls
+                ]
+            }
+        else:
+            # Plain assistant message without tool calls
+            assistant_message = {
+                "role": "assistant",
+                "content": assistant_content
+            }
+        self.messages.append(assistant_message)
+
+        # Process tool calls (execute tools and add results to history)
         if message.tool_calls:
             for tool_call in message.tool_calls:
+                tool_result = None
+
                 if tool_call.function.name == "get_weather":
                     try:
                         arguments = json.loads(tool_call.function.arguments)
                         latitude = arguments.get("latitude", 0.0)
                         longitude = arguments.get("longitude", 0.0)
                         location_name = arguments.get("location_name")
-                        weather_result = self.get_weather(latitude, longitude, location_name)
-                        tool_result_text = self.format_tool_result("get_weather", weather_result)
-                        display_parts.append(tool_result_text)
-
-                        # Add tool response to conversation history
-                        self.messages.append({
-                            "role": "assistant",
-                            "content": assistant_content,
-                            "tool_calls": [
-                                {
-                                    "id": tool_call.id,
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_call.function.name,
-                                        "arguments": tool_call.function.arguments
-                                    }
-                                }
-                            ]
-                        })
-
-                        # Add tool result message
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": weather_result
-                        })
-
+                        tool_result = self.get_weather(latitude, longitude, location_name)
+                        display_parts.append(self.format_tool_result("get_weather", tool_result))
                     except json.JSONDecodeError:
+                        tool_result = "Error parsing tool arguments"
                         display_parts.append("❌ Error parsing tool arguments")
+
                 elif tool_call.function.name == "tell_joke":
                     try:
                         arguments = json.loads(tool_call.function.arguments)
                         setup = arguments.get("setup", "")
                         punchline = arguments.get("punchline", "")
-                        joke_result = self.tell_joke(setup, punchline)
-                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
-                        display_parts.append(tool_result_text)
-
-                        # Add tool response to conversation history
-                        self.messages.append({
-                            "role": "assistant",
-                            "content": assistant_content,
-                            "tool_calls": [
-                                {
-                                    "id": tool_call.id,
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_call.function.name,
-                                        "arguments": tool_call.function.arguments
-                                    }
-                                }
-                            ]
-                        })
-
-                        # Add tool result message
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": joke_result
-                        })
-
+                        tool_result = self.tell_joke(setup, punchline)
+                        display_parts.append(self.format_tool_result("tell_joke", tool_result))
                     except json.JSONDecodeError:
+                        tool_result = "Error parsing tool arguments"
                         display_parts.append("❌ Error parsing tool arguments")
-        else:
-            # Add assistant's response to conversation history (text only)
-            if assistant_content:
-                assistant_message = {
-                    "role": "assistant",
-                    "content": assistant_content
-                }
-                self.messages.append(assistant_message)
-        
+
+                # Add tool result to conversation history
+                if tool_result is not None:
+                    self.messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": tool_result
+                    })
+
         return "\n\n".join(display_parts) if display_parts else "No response received"
