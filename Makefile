@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace
+.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace demo-data demo-data-quick demo-data-negative
 
 run-python:
 	@cd python && ./run.sh
@@ -40,3 +40,15 @@ python-install-local:
 ## Test Python weather tool functionality
 test-python-weather:
 	@cd python && ./scripts/run_test.sh
+
+## Generate demo data (5 conversations, random providers, 5 turns each)
+demo-data:
+	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 5 --max-turns 5 --parallel 3
+
+## Quick demo data (3 short conversations)
+demo-data-quick:
+	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 3 --max-turns 3 --parallel 3 --providers openai_chat
+
+## Generate negative/angry demo conversations for sentiment testing
+demo-data-negative:
+	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 3 --max-turns 4 --parallel 3 --providers openai_chat --persona "an extremely frustrated customer who has been passed around to 5 different support agents" --topic "complaining about a product that keeps breaking"
