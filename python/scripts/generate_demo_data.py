@@ -149,6 +149,20 @@ TOPICS = [
     "pet care and animal behavior",
     "photography tips for beginners",
     "crafts and hobbies to try",
+
+    # Frustrated & Negative scenarios
+    "complaining about a product that keeps breaking",
+    "dealing with a billing error that won't get resolved",
+    "ranting about terrible customer service experiences",
+    "frustrated with software that lost their work",
+    "angry about misleading advertising",
+    "upset about a cancelled flight and ruined travel plans",
+    "complaining about noisy neighbors and landlord issues",
+    "furious about a data breach affecting their account",
+    "venting about a bad restaurant experience",
+    "annoyed by repeated spam calls and scam attempts",
+    "arguing that a previous AI answer was completely wrong",
+    "demanding a refund for a defective product",
 ]
 
 # User personas the simulator can adopt
@@ -202,6 +216,16 @@ USER_PERSONAS = [
     "an expert fact-checking information they already know",
     "someone procrastinating who went down a rabbit hole",
     "a night owl having a late-night curiosity session",
+
+    # Frustrated & Angry personas
+    "an extremely frustrated customer who has been passed around to 5 different support agents",
+    "someone who is furious and uses lots of caps and exclamation marks",
+    "a sarcastic person who mocks every response they get",
+    "someone who keeps saying the AI is useless and demands to speak to a human",
+    "an angry user who threatens to switch to a competitor",
+    "a passive-aggressive person who says 'fine I guess' to every suggestion",
+    "someone having an absolutely terrible day who takes it out on the chat",
+    "a person who insists the AI gave them wrong information last time and wants it fixed NOW",
 ]
 
 # Available providers
@@ -378,6 +402,7 @@ def run_conversation(
     delay_between_turns: float = 1.0,
     topic: Optional[str] = None,
     persona: Optional[str] = None,
+    distinct_id: Optional[str] = None,
 ) -> dict:
     """
     Run a single conversation between the User Simulator and a provider.
@@ -388,6 +413,10 @@ def run_conversation(
     topic = topic or random.choice(TOPICS)
     persona = persona or random.choice(USER_PERSONAS)
     provider_name = PROVIDERS[provider_key][0]
+
+    # Set distinct_id for this conversation (providers read from env var)
+    conversation_distinct_id = distinct_id or f"user-{uuid.uuid4().hex[:8]}"
+    os.environ["POSTHOG_DISTINCT_ID"] = conversation_distinct_id
 
     # Create span name: topic_provider (e.g., "weather_in_various_cities_openai_chat")
     span_name = f"{slugify(topic)}_{slugify(provider_name)}"
@@ -411,6 +440,7 @@ def run_conversation(
     if verbose:
         print(f"\n{'='*60}")
         print(f"Session: {session_id}")
+        print(f"Distinct ID: {conversation_distinct_id}")
         print(f"Span: {span_name}")
         print(f"Provider: {provider_name}")
         print(f"Topic: {topic}")
@@ -466,6 +496,7 @@ def run_conversation(
 
     return {
         "session_id": session_id,
+        "distinct_id": conversation_distinct_id,
         "span_name": span_name,
         "provider": provider_name,
         "topic": topic,
@@ -496,6 +527,9 @@ Examples:
 
   # Specify a topic
   python generate_demo_data.py --topic "weather in various cities" --conversations 3
+
+  # Use a specific distinct ID for all conversations
+  python generate_demo_data.py --distinct-id "demo-user@example.com" --conversations 3
 
   # Run 20 conversations in parallel with 5 workers
   python generate_demo_data.py --conversations 20 --parallel 5
@@ -545,6 +579,11 @@ Available providers:
         "--persona",
         type=str,
         help="Specific persona for the user simulator (default: random)",
+    )
+    parser.add_argument(
+        "--distinct-id",
+        type=str,
+        help="PostHog distinct ID for the simulated user (default: random UUID per conversation)",
     )
     parser.add_argument(
         "--parallel",
@@ -626,6 +665,10 @@ Available providers:
             print(f"Topic: {args.topic}")
         if args.persona:
             print(f"Persona: {args.persona}")
+        if args.distinct_id:
+            print(f"Distinct ID: {args.distinct_id}")
+        else:
+            print(f"Distinct ID: random per conversation")
         print("=" * 60)
 
     results = []
@@ -642,6 +685,7 @@ Available providers:
             delay_between_turns=args.delay,
             topic=args.topic,
             persona=args.persona,
+            distinct_id=args.distinct_id,
         )
 
     if args.parallel > 1:
