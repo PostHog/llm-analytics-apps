@@ -183,6 +183,8 @@ All provider implementations inherit from these base classes and implement:
 - `openai-image.ts` / `gemini-image.ts`
 - `langchain.ts`
 - `vercel-ai.ts` / `vercel-ai-streaming.ts` / `vercel-ai-google.ts`
+- `vercel-ai-anthropic.ts` / `vercel-ai-anthropic-streaming.ts`
+- `vercel-ai-gateway-anthropic.ts` / `vercel-ai-gateway-anthropic-streaming.ts`
 - `vercel-generate-object.ts` / `vercel-stream-object.ts`
 
 ### PostHog Integration
@@ -255,6 +257,7 @@ POSTHOG_DISTINCT_ID=example-user
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
+AI_GATEWAY_API_KEY=your_ai_gateway_api_key_here
 ```
 
 Optional variables:
