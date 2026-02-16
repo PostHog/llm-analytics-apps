@@ -30,6 +30,8 @@
     "@langchain/core": "^0.3.80",
     "@langchain/openai": "^0.3.17",
     "@mastra/core": "^0.24.9",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-node": "^0.212.0",
     "@posthog/ai": "^7.5.3",
     "ai": "^6.0.45",
     "dotenv": "^16.6.1",

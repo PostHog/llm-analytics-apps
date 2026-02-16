@@ -29,6 +29,9 @@ import { VercelStreamObjectProvider } from './providers/vercel-stream-object.js'
 import { MastraProvider } from './providers/mastra.js';
 import { VercelAIGatewayAnthropicProvider } from './providers/vercel-ai-gateway-anthropic.js';
 import { VercelAIGatewayAnthropicStreamingProvider } from './providers/vercel-ai-gateway-anthropic-streaming.js';
+import { VercelAIOtelOpenAIProvider } from './providers/vercel-ai-otel-openai.js';
+import { VercelAIOtelOpenAIEmbeddingsProvider } from './providers/vercel-ai-otel-openai-embeddings.js';
+import { VercelAIOtelGeminiImageProvider } from './providers/vercel-ai-otel-gemini-image.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -157,7 +160,10 @@ function displayProviders(mode?: string): Map<string, string> {
     ['20', 'OpenAI Responses (Image Generation)'],
     ['21', 'Google Gemini (Image Generation)'],
     ['22', 'Vercel AI Gateway (Anthropic)'],
-    ['23', 'Vercel AI Gateway Streaming (Anthropic)']
+    ['23', 'Vercel AI Gateway Streaming (Anthropic)'],
+    ['24', 'Vercel AI SDK OTEL (OpenAI)'],
+    ['25', 'Vercel AI SDK OTEL (OpenAI + Embeddings)'],
+    ['26', 'Vercel AI SDK OTEL (Gemini + Image Gen)']
   ]);
 
   // Filter providers for embeddings mode
@@ -167,7 +173,8 @@ function displayProviders(mode?: string): Map<string, string> {
       ['6', 'OpenAI Responses'],
       ['7', 'OpenAI Responses Streaming'],
       ['8', 'OpenAI Chat Completions'],
-      ['9', 'OpenAI Chat Completions Streaming']
+      ['9', 'OpenAI Chat Completions Streaming'],
+      ['25', 'Vercel AI SDK OTEL (OpenAI + Embeddings)']
     ]);
   }
 
@@ -195,7 +202,8 @@ function displayProviders(mode?: string): Map<string, string> {
       ['10', 'Vercel AI SDK (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
       ['20', 'OpenAI Responses (Image Generation)'],
-      ['21', 'Google Gemini (Image Generation)']
+      ['21', 'Google Gemini (Image Generation)'],
+      ['26', 'Vercel AI SDK OTEL (Gemini + Image Gen)']
     ]);
   }
 
@@ -212,7 +220,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-23)';
+      let prompt = '\nSelect a provider (1-26)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -223,7 +231,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -322,6 +330,12 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelAIGatewayAnthropicProvider(posthog, aiSessionId);
     case '23':
       return new VercelAIGatewayAnthropicStreamingProvider(posthog, aiSessionId);
+    case '24':
+      return new VercelAIOtelOpenAIProvider(posthog, aiSessionId);
+    case '25':
+      return new VercelAIOtelOpenAIEmbeddingsProvider(posthog, aiSessionId);
+    case '26':
+      return new VercelAIOtelGeminiImageProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
@@ -641,7 +655,8 @@ async function runAllTests(mode: string): Promise<void> {
     providersInfo = [
       ['6', 'OpenAI Responses'],
       ['7', 'OpenAI Responses Streaming'],
-      ['8', 'OpenAI Chat Completions']
+      ['8', 'OpenAI Chat Completions'],
+      ['25', 'Vercel AI SDK OTEL (OpenAI + Embeddings)']
     ];
   }
   
@@ -661,7 +676,8 @@ async function runAllTests(mode: string): Promise<void> {
       ['10', 'Vercel AI SDK (OpenAI)'],
       ['18', 'Vercel AI SDK (Google)'],
       ['20', 'OpenAI Responses (Image Generation)'],
-      ['21', 'Google Gemini (Image Generation)']
+      ['21', 'Google Gemini (Image Generation)'],
+      ['26', 'Vercel AI SDK OTEL (Gemini + Image Gen)']
     ];
   }
 
