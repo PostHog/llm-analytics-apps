@@ -2,7 +2,7 @@ import os
 import json
 from posthog.ai.gemini import Client
 from posthog import Posthog
-from .base import BaseProvider
+from .compat_base import BaseProvider
 from .constants import GEMINI_IMAGE_MODEL, DEFAULT_POSTHOG_DISTINCT_ID
 
 class GeminiImageProvider(BaseProvider):

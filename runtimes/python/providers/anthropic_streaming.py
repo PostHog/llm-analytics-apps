@@ -1,7 +1,7 @@
 import os
 from posthog.ai.anthropic import Anthropic
 from posthog import Posthog
-from .base import StreamingProvider
+from .compat_base import StreamingProvider
 from typing import Generator, Optional
 import json
 from .constants import (

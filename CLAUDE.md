@@ -61,7 +61,7 @@ self._debug_log("Custom Title", data)
 this.debugLog("Custom Title", data);
 ```
 
-See `runtimes/python/legacy_providers/anthropic.py` and `runtimes/node/providers/anthropic.ts` for usage examples.
+See `runtimes/python/providers/anthropic.py` and `runtimes/node/providers/anthropic.ts` for usage examples.
 
 ### Building and Development (Node Runtime)
 
@@ -134,7 +134,7 @@ All provider implementations inherit from these base classes and implement:
 
 ### Provider Implementations
 
-#### Python Providers (`runtimes/python/legacy_providers/`)
+#### Python Providers (`runtimes/python/providers/`)
 - `anthropic.py` / `anthropic_streaming.py`
 - `gemini.py` / `gemini_streaming.py`
 - `openai.py` / `openai_chat.py` / `openai_streaming.py` / `openai_chat_streaming.py`
@@ -193,7 +193,7 @@ See the Anthropic provider implementations for the implementation pattern.
 
 ### Local Development with PostHog SDKs
 
-The `run.sh` scripts detect environment variables to use local SDK paths instead of published packages:
+The CLI runtime prepare flow detects environment variables to use local SDK paths instead of published packages:
 
 ```bash
 # .env configuration
@@ -207,7 +207,7 @@ POSTHOG_JS_AI_VERSION=6.1.2
 POSTHOG_JS_NODE_VERSION=5.7.0
 ```
 
-The scripts automatically handle editable installs (`pip install -e` or `npm install`) for local development.
+The prepare flow automatically handles local-path dependency setup for development.
 
 ## Configuration
 
@@ -275,7 +275,7 @@ All providers implement a weather tool that demonstrates function/tool calling:
 - Additional data: Humidity, wind speed, precipitation, weather conditions
 
 **Implementation location:**
-- Python: `runtimes/python/legacy_providers/base.py` - `get_weather()` method
+- Python: `runtimes/python/providers/compat_base.py` - `get_weather()` method
 - Node runtime: `runtimes/node/providers/base.ts` - `getWeather()` method
 
 Each provider must convert its provider-specific tool calling format to/from the standard weather tool interface.

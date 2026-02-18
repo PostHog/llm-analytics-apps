@@ -2,7 +2,7 @@ import os
 from typing import List, Dict, Any, Optional
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
-from .base import BaseProvider
+from .compat_base import BaseProvider
 from .constants import DEFAULT_POSTHOG_DISTINCT_ID
 
 

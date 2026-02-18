@@ -2,7 +2,7 @@ import os
 import json
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
-from .base import BaseProvider
+from .compat_base import BaseProvider
 from .constants import (
     OPENAI_CHAT_MODEL,
     OPENAI_VISION_MODEL,

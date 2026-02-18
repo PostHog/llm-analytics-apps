@@ -1,7 +1,7 @@
 import os
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
-from .base import BaseProvider
+from .compat_base import BaseProvider
 from .constants import OPENAI_IMAGE_MODEL, DEFAULT_POSTHOG_DISTINCT_ID
 
 class OpenAIImageProvider(BaseProvider):

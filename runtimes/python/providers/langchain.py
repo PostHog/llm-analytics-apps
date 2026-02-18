@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, SystemMessage
 from posthog import Posthog
-from .base import BaseProvider
+from .compat_base import BaseProvider
 from .constants import OPENAI_CHAT_MODEL, OPENAI_VISION_MODEL, SYSTEM_PROMPT_ASSISTANT
 
 class LangChainProvider(BaseProvider):

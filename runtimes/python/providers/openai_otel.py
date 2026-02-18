@@ -21,7 +21,7 @@ from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapProp
 from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from posthog import Posthog
 
-from .base import BaseProvider
+from .compat_base import BaseProvider
 
 
 class SessionIDSpanProcessor(SpanProcessor):

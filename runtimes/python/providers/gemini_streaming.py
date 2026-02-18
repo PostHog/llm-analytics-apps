@@ -2,7 +2,7 @@ import os
 from posthog.ai.gemini import Client
 from posthog import Posthog
 from google.genai import types
-from .base import StreamingProvider
+from .compat_base import StreamingProvider
 from typing import Generator, Optional
 
 class GeminiStreamingProvider(StreamingProvider):

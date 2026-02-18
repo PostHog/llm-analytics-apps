@@ -2,7 +2,7 @@ import os
 import json
 from posthog.ai.openai import OpenAI
 from posthog import Posthog
-from .base import StreamingProvider
+from .compat_base import StreamingProvider
 from typing import Generator, Optional
 from .constants import (
     OPENAI_CHAT_MODEL,
