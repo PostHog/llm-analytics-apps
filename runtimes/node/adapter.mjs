@@ -146,6 +146,103 @@ const providerDefinitions = [
     className: "MastraProvider",
     inputModes: ["text"],
   },
+  {
+    id: "vercel_ai_openai",
+    name: "Vercel AI SDK (OpenAI)",
+    moduleFile: "vercel-ai.js",
+    className: "VercelAIProvider",
+    streamingModuleFile: "vercel-ai-streaming.js",
+    streamingClassName: "VercelAIStreamingProvider",
+    inputModes: ["text", "image", "file"],
+    options: [
+      {
+        id: "streaming",
+        name: "Streaming",
+        shortcutKey: "s",
+        type: "boolean",
+        default: false,
+      },
+    ],
+  },
+  {
+    id: "vercel_ai_google",
+    name: "Vercel AI SDK (Google)",
+    moduleFile: "vercel-ai-google.js",
+    className: "VercelAIGoogleProvider",
+    streamingModuleFile: "vercel-ai-google-streaming.js",
+    streamingClassName: "VercelAIGoogleStreamingProvider",
+    inputModes: ["text", "image", "file"],
+    options: [
+      {
+        id: "streaming",
+        name: "Streaming",
+        shortcutKey: "s",
+        type: "boolean",
+        default: false,
+      },
+    ],
+  },
+  {
+    id: "vercel_ai_anthropic",
+    name: "Vercel AI SDK (Anthropic)",
+    moduleFile: "vercel-ai-anthropic.js",
+    className: "VercelAIAnthropicProvider",
+    streamingModuleFile: "vercel-ai-anthropic-streaming.js",
+    streamingClassName: "VercelAIAnthropicStreamingProvider",
+    inputModes: ["text", "image", "file"],
+    options: [
+      {
+        id: "streaming",
+        name: "Streaming",
+        shortcutKey: "s",
+        type: "boolean",
+        default: false,
+      },
+    ],
+  },
+  {
+    id: "vercel_ai_gateway_anthropic",
+    name: "Vercel AI Gateway (Anthropic)",
+    moduleFile: "vercel-ai-gateway-anthropic.js",
+    className: "VercelAIGatewayAnthropicProvider",
+    streamingModuleFile: "vercel-ai-gateway-anthropic-streaming.js",
+    streamingClassName: "VercelAIGatewayAnthropicStreamingProvider",
+    inputModes: ["text", "image", "file"],
+    options: [
+      {
+        id: "streaming",
+        name: "Streaming",
+        shortcutKey: "s",
+        type: "boolean",
+        default: false,
+      },
+    ],
+  },
+  {
+    id: "vercel_generate_object",
+    name: "Vercel AI SDK - generateObject (OpenAI)",
+    moduleFile: "vercel-generate-object.js",
+    className: "VercelGenerateObjectProvider",
+    inputModes: ["text", "image", "file"],
+  },
+  {
+    id: "vercel_stream_object",
+    name: "Vercel AI SDK - streamObject (OpenAI)",
+    moduleFile: "vercel-stream-object.js",
+    className: "VercelStreamObjectProvider",
+    streamingModuleFile: "vercel-stream-object.js",
+    streamingClassName: "VercelStreamObjectProvider",
+    inputModes: ["text", "image", "file"],
+    options: [
+      {
+        id: "streaming",
+        name: "Streaming",
+        shortcutKey: "s",
+        type: "boolean",
+        default: true,
+      },
+    ],
+  },
 ];
 
 const providerOptions = new Map();

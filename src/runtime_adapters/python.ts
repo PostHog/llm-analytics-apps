@@ -63,7 +63,7 @@ export default class PythonAdapter extends SubprocessAdapter {
 
       // Only install dependencies if required modules are missing.
       const dependencyCheck =
-        "import posthog, openai, anthropic, dotenv, google.genai";
+        "import posthog, openai, anthropic, dotenv, google.genai, requests, langchain, litellm, opentelemetry";
       const dependenciesInstalled = await execAsync(
         `"${pythonPath}" -c "${dependencyCheck}"`,
       )

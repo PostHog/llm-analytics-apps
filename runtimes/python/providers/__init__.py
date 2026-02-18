@@ -21,6 +21,8 @@ def discover_providers(posthog_client):
             # Find all BaseProvider subclasses
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if issubclass(obj, BaseProvider) and obj != BaseProvider:
+                    if name in {"LegacyProviderBridge"}:
+                        continue
                     # Instantiate and add to providers list
                     try:
                         providers.append(obj(posthog_client))

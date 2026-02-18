@@ -2,3 +2,13 @@ posthog
 openai
 anthropic
 google-genai
+python-dotenv
+requests
+langchain
+langchain-core
+langchain-openai
+litellm
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-http
+opentelemetry-instrumentation-openai
