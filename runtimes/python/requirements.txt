@@ -1,0 +1,4 @@
+posthog
+openai
+anthropic
+google-genai

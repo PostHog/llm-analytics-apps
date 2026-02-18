@@ -10,7 +10,7 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
 
 ### For Node.js:
 - Node.js 24 or higher
-- npm package manager
+- npm or pnpm package manager
 
 ## ⚙️ Setup
 
@@ -27,6 +27,17 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
 
 2. **Run the application:**
 
+   Unified shell (recommended):
+   ```bash
+   pnpm install
+   pnpm start
+   ```
+
+   Or from repo root:
+   ```bash
+   make run-cli
+   ```
+
    For Python:
    ```bash
    cd python
@@ -38,6 +49,14 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
    cd node
    ./run.sh
    ```
+
+### Unified Shell Defaults
+
+- Runtime: `Node`
+- Provider: `OpenAI Chat Completions`
+- Streaming: `On`
+
+Provider options (for example `S` streaming, `T` thinking) are available from selectors and chat.
 
 The `run.sh` script will automatically:
 - Set up a virtual environment (Python) or install dependencies (Node)

@@ -1,4 +1,13 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace demo-data demo-data-quick demo-data-negative
+.PHONY: run-cli run-cli-debug build-cli run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace demo-data demo-data-quick demo-data-negative
+
+run-cli:
+	@pnpm start
+
+run-cli-debug:
+	@DEBUG=1 pnpm start
+
+build-cli:
+	@pnpm build
 
 run-python:
 	@cd python && ./run.sh

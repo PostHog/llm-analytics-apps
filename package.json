@@ -1,0 +1,35 @@
+{
+  "name": "llm-analytics-apps-cli",
+  "version": "1.0.0",
+  "description": "Unified shell for testing PostHog LLM analytics runtimes",
+  "license": "MIT",
+  "author": "Carlos Marchal <carlos@posthog.com>",
+  "type": "module",
+  "main": "dist/main.js",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "ink": "^6.7.0",
+    "ink-link": "^5.0.0",
+    "ink-select-input": "^6.2.0",
+    "ink-text-input": "^6.0.0",
+    "mime-types": "^3.0.2",
+    "react": "^19.2.4",
+    "terminal-image": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14",
+    "husky": "^9.1.7",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "prettier --write .",
+    "build": "tsc",
+    "start": "pnpm build && node --enable-source-maps dist/main.js",
+    "dev": "node --enable-source-maps dist/main.js",
+    "prepare": "husky"
+  }
+}
