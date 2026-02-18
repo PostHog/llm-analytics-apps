@@ -33,6 +33,11 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
    pnpm start
    ```
 
+   Dev mode (auto rebuild + auto restart on TS changes):
+   ```bash
+   pnpm dev
+   ```
+
    Or from repo root:
    ```bash
    make run-cli

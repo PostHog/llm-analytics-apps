@@ -383,19 +383,19 @@ async function runChat(provider: any): Promise<boolean> {
 
 async function runToolCallTest(provider: any): Promise<{ success: boolean; error: string | null }> {
   const testQuery = 'What is the weather in Montreal, Canada?';
-  
+
   console.log(`\nTool Call Test: ${provider.getName()}`);
   console.log('-'.repeat(50));
   console.log(`Query: "${testQuery}"`);
   console.log();
-  
+
   try {
     // Reset conversation for clean test
     provider.resetConversation();
-    
+
     // Send the test query
     const response = await provider.chat(testQuery);
-    
+
     console.log(`Response: ${response}`);
     console.log();
     return { success: true, error: null };
@@ -407,19 +407,19 @@ async function runToolCallTest(provider: any): Promise<{ success: boolean; error
 
 async function runMessageTest(provider: any): Promise<{ success: boolean; error: string | null }> {
   const testQuery = 'Hi, how are you today?';
-  
+
   console.log(`\nMessage Test: ${provider.getName()}`);
   console.log('-'.repeat(50));
   console.log(`Query: "${testQuery}"`);
   console.log();
-  
+
   try {
     // Reset conversation for clean test
     provider.resetConversation();
-    
+
     // Send the test query
     const response = await provider.chat(testQuery);
-    
+
     console.log(`Response: ${response}`);
     console.log();
     return { success: true, error: null };
@@ -644,7 +644,7 @@ async function runAllTests(mode: string): Promise<void> {
       ['8', 'OpenAI Chat Completions']
     ];
   }
-  
+
   // Filter providers for structured output test (only those that support it)
   if (mode === '6') {
     // Only Vercel Object providers support structured output
@@ -666,54 +666,54 @@ async function runAllTests(mode: string): Promise<void> {
   }
 
   const testName = mode === '2' ? 'Tool Call Test' :
-                   mode === '3' ? 'Message Test' :
-                   mode === '4' ? 'Image Test' :
-                   mode === '5' ? 'Embeddings Test' :
-                   mode === '6' ? 'Structured Output Test' :
-                   mode === '7' ? 'Transcription Test' :
-                   mode === '8' ? 'Image Generation Test' : 'Unknown Test';
+    mode === '3' ? 'Message Test' :
+      mode === '4' ? 'Image Test' :
+        mode === '5' ? 'Embeddings Test' :
+          mode === '6' ? 'Structured Output Test' :
+            mode === '7' ? 'Transcription Test' :
+              mode === '8' ? 'Image Generation Test' : 'Unknown Test';
   console.log(`\n🔄 Running ${testName} on all providers...`);
   console.log('='.repeat(60));
   console.log();
-  
+
   interface TestResult {
     name: string;
     success: boolean;
     error: string | null;
   }
-  
+
   const results: TestResult[] = [];
-  
+
   for (const [providerId, providerName] of providersInfo) {
     console.log(`[${providerId}/8] Testing ${providerName}...`);
-    
+
     try {
       // For automated tests, don't enable thinking by default
       const provider = createProvider(providerId, false, undefined);
-      
+
       // Run the appropriate test
       const result = mode === '2'
         ? await runToolCallTest(provider)
         : mode === '3'
-        ? await runMessageTest(provider)
-        : mode === '4'
-        ? await runImageTest(provider)
-        : mode === '5'
-        ? await runEmbeddingsTest(provider)
-        : mode === '6'
-        ? await runStructuredOutputTest(provider)
-        : mode === '7'
-        ? await runTranscriptionTest(provider)
-        : mode === '8'
-        ? await runImageGenerationTest(provider)
-        : { success: false, error: 'Unknown test mode' };
-      
+          ? await runMessageTest(provider)
+          : mode === '4'
+            ? await runImageTest(provider)
+            : mode === '5'
+              ? await runEmbeddingsTest(provider)
+              : mode === '6'
+                ? await runStructuredOutputTest(provider)
+                : mode === '7'
+                  ? await runTranscriptionTest(provider)
+                  : mode === '8'
+                    ? await runImageGenerationTest(provider)
+                    : { success: false, error: 'Unknown test mode' };
+
       results.push({
         name: providerName,
         success: result.success,
         error: result.error
       });
-      
+
     } catch (initError: any) {
       console.log(`   ❌ Failed to initialize: ${initError.message}`);
       results.push({
@@ -723,20 +723,20 @@ async function runAllTests(mode: string): Promise<void> {
       });
     }
   }
-  
+
   // Print summary
   console.log('\n' + '='.repeat(60));
   console.log(`📊 ${testName} Summary`);
   console.log('='.repeat(60));
-  
+
   const successful = results.filter(r => r.success);
   const failed = results.filter(r => !r.success);
-  
+
   console.log(`\n✅ Successful: ${successful.length}/${results.length}`);
   for (const result of successful) {
     console.log(`   • ${result.name}`);
   }
-  
+
   if (failed.length > 0) {
     console.log(`\n❌ Failed: ${failed.length}/${results.length}`);
     for (const result of failed) {
@@ -744,7 +744,7 @@ async function runAllTests(mode: string): Promise<void> {
       console.log(`     Error: ${result.error}`);
     }
   }
-  
+
   console.log('='.repeat(60));
   console.log();
 }
@@ -754,10 +754,10 @@ async function main(): Promise<void> {
   console.log('\n🚀 Unified AI Chatbot');
   console.log('Choose your mode and AI provider');
   console.log();
-  
+
   // First, select the mode
   let mode = await selectMode();
-  
+
   // Main loop for provider selection and testing
   while (true) {
     // Display providers and get user choice
@@ -767,19 +767,19 @@ async function main(): Promise<void> {
     const allowModeChange = (mode === '1' || mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7' || mode === '8');
     const allowAll = (mode === '2' || mode === '3' || mode === '4' || mode === '5' || mode === '6' || mode === '7' || mode === '8');
     const choice = await getProviderChoice(allowModeChange, allowAll);
-    
+
     // Check if user wants to change mode
     if (choice === 'mode_change') {
       mode = await selectMode();
       continue;
     }
-    
+
     // Check if user wants to test all providers
     if (choice === 'all') {
       await runAllTests(mode);
       continue;
     }
-    
+
     // Check if Anthropic provider selected and prompt for thinking config
     let enableThinking = false;
     let thinkingBudget: number | undefined = undefined;
@@ -788,7 +788,7 @@ async function main(): Promise<void> {
       enableThinking = config.enableThinking;
       thinkingBudget = config.thinkingBudget;
     }
-    
+
     // Create provider instance
     let provider;
     try {
@@ -802,7 +802,7 @@ async function main(): Promise<void> {
       console.log(`❌ Failed to initialize provider: ${error.message}`);
       continue;
     }
-    
+
     // Execute based on mode
     if (mode === '1') {
       // Chat Mode - run interactive chat and continue when done

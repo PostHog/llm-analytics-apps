@@ -29,7 +29,8 @@
     "lint": "prettier --write .",
     "build": "tsc",
     "start": "pnpm build && node --enable-source-maps dist/main.js",
-    "dev": "node --enable-source-maps dist/main.js",
+    "dev": "sh -c 'pnpm build --watch & TSC_PID=$!; trap \"kill $TSC_PID\" EXIT INT TERM; node --watch --enable-source-maps dist/main.js'",
+    "dev:run": "node --watch --enable-source-maps dist/main.js",
     "prepare": "husky"
   }
 }
