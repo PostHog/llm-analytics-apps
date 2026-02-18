@@ -213,7 +213,10 @@ export const Chat = () => {
 
         setMessages([...updatedMessages, assistantMessage]);
       } else {
-        const assistantMessage = await runtime.chat(provider.id, updatedMessages);
+        const assistantMessage = await runtime.chat(
+          provider.id,
+          updatedMessages,
+        );
         setMessages([...updatedMessages, assistantMessage]);
       }
     }
@@ -238,16 +241,18 @@ export const Chat = () => {
     <Box flexDirection="column" height="100%">
       <Box flexDirection="column" flexGrow={1} padding={1} overflow="hidden">
         {messages.length === 0 ? (
-          <Box flexDirection="column">
-            <Text color="gray">No messages yet. Start typing below...</Text>
-            <Text color="gray">{inputModeHint}</Text>
+          <Box flexDirection="column" paddingTop={2}>
+            <Text bold color="gray">
+              Start a conversation
+            </Text>
+            <Text dimColor>{inputModeHint}</Text>
           </Box>
         ) : (
           visibleMessages.map((msg, idx) => {
             return (
               <Box key={idx} marginBottom={1} flexDirection="column">
-                <Text bold color={msg.role === "user" ? "green" : "blue"}>
-                  {msg.role === "user" ? "You" : "Assistant"}:
+                <Text bold color={msg.role === "user" ? "green" : "cyan"}>
+                  {msg.role === "user" ? "\u25B8 You" : "\u25C2 Assistant"}
                 </Text>
                 {msg.content.map((block, blockIdx) => {
                   if (isTextBlock(block)) {
@@ -289,7 +294,11 @@ export const Chat = () => {
       </Box>
       {!isFocused && (
         <Box marginBottom={1}>
-          <Text color="yellow">Press Return to write</Text>
+          <Text color="gray">Press </Text>
+          <Text color="white" bold>
+            Return
+          </Text>
+          <Text color="gray"> to write</Text>
         </Box>
       )}
       <AttachmentStatusbar
@@ -298,7 +307,9 @@ export const Chat = () => {
       />
       <Box marginBottom={1}>
         <Box marginRight={1}>
-          <Text>{">"}</Text>
+          <Text color="#B62AD9" bold>
+            {"\u276F"}
+          </Text>
         </Box>
         <TextInput
           key={inputKey}

@@ -1,7 +1,6 @@
 import SelectInput from "ink-select-input";
 import { useNavigateScreen, type Screen } from "./screen_context.js";
 import { Box, Text, useApp } from "ink";
-import { useState } from "react";
 import { useRuntime } from "./runtime_context.js";
 import { useMode, type AppMode } from "./mode_context.js";
 import { useProvider } from "./provider_context.js";
@@ -15,6 +14,14 @@ interface Item {
   reason?: string;
 }
 
+const Indicator = ({ isSelected = false }: { isSelected?: boolean }) => (
+  <Box marginRight={1}>
+    <Text color={isSelected ? "#B62AD9" : "gray"}>
+      {isSelected ? "\u25B8" : " "}
+    </Text>
+  </Box>
+);
+
 export function ModeSelector() {
   const navigate = useNavigateScreen();
   const app = useApp();
@@ -22,8 +29,6 @@ export function ModeSelector() {
   const { setMode } = useMode();
   const { provider } = useProvider();
   const { optionValues } = useOptions();
-  const [hint, setHint] = useState<string>("");
-
   const providerId = provider.id;
   const runtimeId = runtime.id();
   const providerInputModes = new Set(provider.input_modes);
@@ -32,9 +37,11 @@ export function ModeSelector() {
       ? optionValues["endpoint"]
       : "";
 
-  const supportsChat = !["openai_transcription", "openai_image", "gemini_image"].includes(
-    providerId,
-  );
+  const supportsChat = ![
+    "openai_transcription",
+    "openai_image",
+    "gemini_image",
+  ].includes(providerId);
   const supportsImageInput = providerInputModes.has("image");
   const supportsEmbeddings = ["openai_chat", "openai_responses"].includes(
     providerId,
@@ -49,13 +56,6 @@ export function ModeSelector() {
   );
 
   const handleSelect = async (item: Item) => {
-    if (item.enabled === false) {
-      setHint(item.reason || "This mode is unavailable for the current model.");
-      return;
-    }
-
-    setHint("");
-
     if (item.value === "__exit__") {
       try {
         await runtime.stop();
@@ -80,28 +80,32 @@ export function ModeSelector() {
       value: "mode_runner",
       mode: "tool_call_test",
       enabled: supportsChat,
-      reason: "Unavailable: current provider/model does not support chat tests.",
+      reason:
+        "Unavailable: current provider/model does not support chat tests.",
     },
     {
       label: "Message Test",
       value: "mode_runner",
       mode: "message_test",
       enabled: supportsChat,
-      reason: "Unavailable: current provider/model does not support chat tests.",
+      reason:
+        "Unavailable: current provider/model does not support chat tests.",
     },
     {
       label: "Image Test",
       value: "mode_runner",
       mode: "image_test",
       enabled: supportsChat && supportsImageInput,
-      reason: "Unavailable: current provider/model does not support image input.",
+      reason:
+        "Unavailable: current provider/model does not support image input.",
     },
     {
       label: "Embeddings Test",
       value: "mode_runner",
       mode: "embeddings_test",
       enabled: supportsEmbeddings,
-      reason: "Unavailable: current provider/model does not support embeddings.",
+      reason:
+        "Unavailable: current provider/model does not support embeddings.",
     },
     {
       label: "Structured Output Test",
@@ -130,22 +134,47 @@ export function ModeSelector() {
     { label: "Exit", value: "__exit__" },
   ];
 
-  const renderedItems = items.map((item) => ({
-    ...item,
-    label: item.enabled === false ? `${item.label} (Unavailable)` : item.label,
-  }));
+  const visibleItems = items.filter((item) => item.enabled !== false);
+
+  const ItemComponent = ({
+    isSelected = false,
+    label = "",
+  }: {
+    isSelected?: boolean;
+    label?: string;
+  }) => {
+    if (label === "Exit") {
+      return (
+        <Text color={isSelected ? "red" : "gray"} bold={isSelected}>
+          {label}
+        </Text>
+      );
+    }
+    return (
+      <Text color="white" bold={isSelected} dimColor={!isSelected}>
+        {label}
+      </Text>
+    );
+  };
 
   return (
-    <Box padding={2} flexDirection="column">
+    <Box flexDirection="column" padding={1}>
+      <Box borderStyle="bold" borderColor="#B62AD9" paddingX={2}>
+        <Text bold color="#B62AD9">
+          {"\u25A0"} PostHog LLM Analytics
+        </Text>
+      </Box>
+
+      <Box marginTop={1} marginLeft={1} marginBottom={1}>
+        <Text bold>Select a mode</Text>
+      </Box>
+
       <SelectInput
-        items={renderedItems}
+        items={visibleItems}
         onSelect={handleSelect}
+        indicatorComponent={Indicator}
+        itemComponent={ItemComponent}
       />
-      {hint ? (
-        <Box marginTop={1}>
-          <Text color="yellow">{hint}</Text>
-        </Box>
-      ) : null}
     </Box>
   );
 }

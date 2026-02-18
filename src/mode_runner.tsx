@@ -104,16 +104,22 @@ export const ModeRunner = () => {
 
   return (
     <Box flexDirection="column" padding={1} flexGrow={1}>
-      <Text bold>{MODE_LABELS[mode] || mode}</Text>
-      <Text dimColor>Provider: {provider.name}</Text>
-      <Text dimColor>{isRunning ? "Running..." : "Press R to run again"}</Text>
+      <Text bold color="#B62AD9">
+        {MODE_LABELS[mode] || mode}
+      </Text>
       <Text dimColor>
-        Scroll: ↑/↓ or j/k, PageUp/PageDown ({startLine + 1}-
-        {Math.min(outputLines.length, endLine)} / {outputLines.length || 0})
+        {`${provider.name} \u00B7 ${isRunning ? "Running\u2026" : "Complete"}`}
       </Text>
       <Box marginTop={1}>
         <Text>{visibleLines.join("\n")}</Text>
       </Box>
+      {outputLines.length > visibleLineCount && (
+        <Box marginTop={1}>
+          <Text dimColor>
+            {`Lines ${startLine + 1}\u2013${Math.min(outputLines.length, endLine)} of ${outputLines.length} \u00B7 \u2191\u2193/j/k: Scroll \u00B7 PgUp/PgDn: Page`}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 };

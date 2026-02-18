@@ -57,7 +57,9 @@ export const RuntimeProvider = ({ children }: { children: ReactNode }) => {
   );
   const [startupError, setStartupError] = useState<string | null>(null);
 
-  const pickInitialRuntime = (runtimes: RuntimeAdapter[]): RuntimeAdapter | null => {
+  const pickInitialRuntime = (
+    runtimes: RuntimeAdapter[],
+  ): RuntimeAdapter | null => {
     const nodeRuntime = runtimes.find((rt) => rt.id() === "node");
     if (nodeRuntime) {
       return nodeRuntime;
@@ -83,7 +85,9 @@ export const RuntimeProvider = ({ children }: { children: ReactNode }) => {
             setStartupError(null);
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
-            setStartupError(`Failed to start runtime "${firstRuntime.name()}": ${message}`);
+            setStartupError(
+              `Failed to start runtime "${firstRuntime.name()}": ${message}`,
+            );
           }
         }
       })
@@ -109,7 +113,9 @@ export const RuntimeProvider = ({ children }: { children: ReactNode }) => {
       setStartupError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setStartupError(`Failed to start runtime "${newRuntime.name()}": ${message}`);
+      setStartupError(
+        `Failed to start runtime "${newRuntime.name()}": ${message}`,
+      );
 
       try {
         await oldRuntime.start();

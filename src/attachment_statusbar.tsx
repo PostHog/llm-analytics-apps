@@ -19,9 +19,10 @@ export const AttachmentStatusbar = ({
 
   return (
     <Box marginBottom={1}>
-      <Text>
-        {fileText} {clearHint}
+      <Text color="yellowBright" bold>
+        [{fileText}]
       </Text>
+      <Text dimColor> {clearHint}</Text>
     </Box>
   );
 };

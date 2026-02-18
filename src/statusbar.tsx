@@ -4,6 +4,8 @@ import { useProvider } from "./provider_context.js";
 import { useScreen } from "./screen_context.js";
 import { useFocus } from "./focus_context.js";
 
+type Segment = { text: string; color: string; bold?: boolean };
+
 export const Statusbar = () => {
   const { stdout } = useStdout();
   const { runtime } = useRuntime();
@@ -11,71 +13,59 @@ export const Statusbar = () => {
   const screen = useScreen();
   const { isFocused } = useFocus();
 
+  const cols = stdout.columns || 120;
   const isRuntimeActive = screen === "runtime_selector";
   const isProviderActive = screen === "provider_selector";
-  const cols = stdout.columns || 120;
 
-  const truncate = (value: string, width: number): string => {
-    if (width <= 0) {
-      return "";
-    }
-    if (value.length > width) {
-      return width > 3 ? `${value.slice(0, width - 3)}...` : value.slice(0, width);
-    }
-    return value;
-  };
+  const bg = "#B62AD9";
+  const sep = " \u2502 ";
 
-  const separatorWidth = 3;
-  const titleWidth = 18;
-  const menuWidth = 14;
-  const runtimeWidth = 24;
-  const providerMinWidth = 20;
-  const fixedWidth = titleWidth + menuWidth + runtimeWidth + separatorWidth * 3;
-  const providerWidth = Math.max(providerMinWidth, cols - fixedWidth);
+  const parts: Segment[] = [
+    { text: " \u25A0 LLM Analytics", color: "white", bold: true },
+    { text: sep, color: "white" },
+    { text: isFocused ? "Esc: Settings" : "Esc: Menu", color: "white" },
+    { text: sep, color: "white" },
+    {
+      text: `R: ${runtime.name()}`,
+      color: isRuntimeActive ? "yellowBright" : "white",
+    },
+    { text: sep, color: "white" },
+    {
+      text: `P: ${provider.name}`,
+      color: isProviderActive ? "yellowBright" : "white",
+    },
+  ];
 
-  const brandSegment = truncate("LLM Analytics Apps", titleWidth);
-  const menuSegment = truncate(
-    isFocused ? "(Esc) Settings" : "(Esc) Menu",
-    menuWidth,
-  );
-  const runtimeSegment = truncate(`(R) Runtime: ${runtime.name()}`, runtimeWidth);
-  const providerSegment = truncate(`(P) Provider: ${provider.name}`, providerWidth);
+  // Truncate the last segment if total exceeds terminal width
+  const totalWidth = parts.reduce((sum, p) => sum + p.text.length, 0);
+  if (totalWidth > cols) {
+    const last = parts[parts.length - 1]!;
+    const excess = totalWidth - cols;
+    const available = last.text.length - excess;
+    last.text =
+      available > 3
+        ? last.text.slice(0, available - 1) + "\u2026"
+        : available > 0
+          ? last.text.slice(0, available)
+          : "";
+  }
+
+  const renderedWidth = parts.reduce((sum, p) => sum + p.text.length, 0);
+  const padWidth = Math.max(0, cols - renderedWidth);
 
   return (
-    <Box width="100%">
-      <Box width={titleWidth}>
-        <Text bold color="cyan" wrap="truncate-end">
-          {brandSegment}
+    <Box width={cols}>
+      {parts.map((part, i) => (
+        <Text
+          key={i}
+          backgroundColor={bg}
+          color={part.color}
+          bold={part.bold === true}
+        >
+          {part.text}
         </Text>
-      </Box>
-      <Text color="gray"> | </Text>
-      <Box width={menuWidth}>
-        <Text wrap="truncate-end">{menuSegment}</Text>
-      </Box>
-      <Text color="gray"> | </Text>
-      <Box width={runtimeWidth}>
-        {isRuntimeActive ? (
-          <Text color="yellow" wrap="truncate-end">
-            {runtimeSegment}
-          </Text>
-        ) : (
-          <Text dimColor={isFocused} wrap="truncate-end">
-            {runtimeSegment}
-          </Text>
-        )}
-      </Box>
-      <Text color="gray"> | </Text>
-      <Box width={providerWidth}>
-        {isProviderActive ? (
-          <Text color="green" wrap="truncate-end">
-            {providerSegment}
-          </Text>
-        ) : (
-          <Text dimColor={isFocused} wrap="truncate-end">
-            {providerSegment}
-          </Text>
-        )}
-      </Box>
+      ))}
+      {padWidth > 0 && <Text backgroundColor={bg}>{" ".repeat(padWidth)}</Text>}
     </Box>
   );
 };

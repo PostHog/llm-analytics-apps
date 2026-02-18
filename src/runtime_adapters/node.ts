@@ -101,7 +101,10 @@ export default class NodeAdapter extends SubprocessAdapter {
     return response.message;
   }
 
-  override async runModeTest(providerId: string, mode: string): Promise<Message> {
+  override async runModeTest(
+    providerId: string,
+    mode: string,
+  ): Promise<Message> {
     const response = await this.sendMessage<{ message: Message }>({
       action: "run_mode_test",
       provider: providerId,
@@ -138,7 +141,10 @@ export default class NodeAdapter extends SubprocessAdapter {
           if (line) {
             try {
               const message = JSON.parse(line);
-              if (message.type === "chunk" && typeof message.chunk === "string") {
+              if (
+                message.type === "chunk" &&
+                typeof message.chunk === "string"
+              ) {
                 onChunk(message.chunk);
               } else if (message.type === "done" && message.message) {
                 done = true;

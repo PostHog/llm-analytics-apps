@@ -153,7 +153,6 @@ export default abstract class SubprocessAdapter extends RuntimeAdapter {
         `${this.name()} adapter failed to start. ${processError ? `Error: ${processError}` : ""}`,
       );
     }
-
   }
 
   /**

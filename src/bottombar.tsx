@@ -11,10 +11,12 @@ const MODE_LABELS: Record<string, string> = {
   message_test: "Message Test",
   image_test: "Image Test",
   embeddings_test: "Embeddings Test",
-  structured_output_test: "Structured Output Test",
+  structured_output_test: "Structured Output",
   transcription_test: "Transcription Test",
-  image_generation_test: "Image Generation Test",
+  image_generation_test: "Image Generation",
 };
+
+type Segment = { text: string; color: string; bold?: boolean };
 
 export const BottomBar = () => {
   const { stdout } = useStdout();
@@ -24,70 +26,82 @@ export const BottomBar = () => {
   const { isFocused } = useFocus();
   const screen = useScreen();
 
+  const cols = stdout.columns || 120;
   const modeDisplay =
     screen === "chat" || screen === "mode_runner"
       ? (MODE_LABELS[mode] ?? mode)
       : "Menu";
-  const cols = stdout.columns || 120;
-
-  const truncate = (value: string, width: number): string => {
-    if (width <= 0) {
-      return "";
-    }
-    if (value.length > width) {
-      return width > 3 ? `${value.slice(0, width - 3)}...` : value.slice(0, width);
-    }
-    return value;
-  };
-
-  const modeWidth = Math.max(28, Math.floor(cols * 0.30));
-  const hintWidth = Math.max(32, Math.floor(cols * 0.34));
-  const optionsWidth = Math.max(
-    20,
-    cols - modeWidth - hintWidth - 6, // separators + spaces
-  );
 
   const optionTokens = (provider.options || []).map((option) => {
     const currentValue = optionValues[option.id] ?? option.default;
     if (option.type === "boolean") {
       return `(${option.shortcutKey.toUpperCase()}) ${option.name}: ${currentValue ? "On" : "Off"}`;
     }
-    const selectedOption = option.options.find((opt) => opt.id === currentValue);
+    const selectedOption = option.options.find(
+      (opt) => opt.id === currentValue,
+    );
     const label = selectedOption?.label || String(currentValue);
     return `(${option.shortcutKey.toUpperCase()}) ${option.name}: ${label}`;
   });
 
-  const modeSegment = truncate(`Mode: ${modeDisplay}`, modeWidth);
-  const optionsSegment = truncate(optionTokens.join("  "), optionsWidth);
   const hintText =
     screen === "mode_runner"
-      ? "R: Run again | Up/Down: Scroll | PgUp/PgDn: Page"
+      ? "R: Rerun \u2502 \u2191\u2193: Scroll \u2502 PgUp/PgDn: Page"
       : screen === "chat"
-        ? (isFocused
-            ? "Enter: Send message | Esc: Settings"
-            : "Enter: Focus input | Esc: Menu")
-        : "Enter: Select | Esc: Back";
-  const hintSegment = truncate(hintText, hintWidth);
+        ? isFocused
+          ? "Enter: Send \u2502 Esc: Settings"
+          : "Enter: Focus \u2502 Esc: Menu"
+        : "Enter: Select \u2502 Esc: Back";
+
+  const bg = "gray";
+  const sep = " \u2502 ";
+
+  const parts: Segment[] = [
+    { text: ` ${modeDisplay}`, color: "cyanBright", bold: true },
+  ];
+
+  if (optionTokens.length > 0) {
+    parts.push({ text: sep, color: "white" });
+    parts.push({ text: optionTokens.join("  "), color: "yellowBright" });
+  }
+
+  parts.push({ text: sep, color: "white" });
+  parts.push({ text: hintText, color: "white" });
+
+  // Truncate last content segment if total exceeds terminal width
+  const totalWidth = parts.reduce((sum, p) => sum + p.text.length, 0);
+  if (totalWidth > cols) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i]!.text !== sep) {
+        const excess = totalWidth - cols;
+        const available = parts[i]!.text.length - excess;
+        parts[i]!.text =
+          available > 3
+            ? parts[i]!.text.slice(0, available - 1) + "\u2026"
+            : available > 0
+              ? parts[i]!.text.slice(0, available)
+              : "";
+        break;
+      }
+    }
+  }
+
+  const renderedWidth = parts.reduce((sum, p) => sum + p.text.length, 0);
+  const padWidth = Math.max(0, cols - renderedWidth);
 
   return (
-    <Box width="100%">
-      <Box width={modeWidth}>
-        <Text color="blueBright" wrap="truncate-end">
-          {modeSegment}
+    <Box width={cols}>
+      {parts.map((part, i) => (
+        <Text
+          key={i}
+          backgroundColor={bg}
+          color={part.color}
+          bold={part.bold === true}
+        >
+          {part.text}
         </Text>
-      </Box>
-      <Text color="gray"> | </Text>
-      <Box width={optionsWidth}>
-        <Text color="cyanBright" wrap="truncate-end">
-          {optionsSegment}
-        </Text>
-      </Box>
-      <Text color="gray"> | </Text>
-      <Box width={hintWidth}>
-        <Text color="greenBright" wrap="truncate-end">
-          {hintSegment}
-        </Text>
-      </Box>
+      ))}
+      {padWidth > 0 && <Text backgroundColor={bg}>{" ".repeat(padWidth)}</Text>}
     </Box>
   );
 };

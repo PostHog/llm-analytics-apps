@@ -11,7 +11,8 @@ const execAsync = promisify(exec);
 const PYTHON_RUNTIME_DIR = path.join(process.cwd(), "runtimes", "python");
 const DEFAULT_VENV_DIR = path.join(PYTHON_RUNTIME_DIR, "venv");
 const SHARED_VENV_DIR = path.join(process.cwd(), "python", "venv");
-const VENV_DIR = process.env["LLM_ANALYTICS_PYTHON_VENV"] ||
+const VENV_DIR =
+  process.env["LLM_ANALYTICS_PYTHON_VENV"] ||
   (existsSync(SHARED_VENV_DIR) ? SHARED_VENV_DIR : DEFAULT_VENV_DIR);
 const UV_CACHE_DIR = path.join(PYTHON_RUNTIME_DIR, ".uv-cache");
 
@@ -161,7 +162,10 @@ export default class PythonAdapter extends SubprocessAdapter {
     return response.message;
   }
 
-  override async runModeTest(providerId: string, mode: string): Promise<Message> {
+  override async runModeTest(
+    providerId: string,
+    mode: string,
+  ): Promise<Message> {
     const response = await this.sendMessage<{ message: Message }>({
       action: "run_mode_test",
       provider: providerId,

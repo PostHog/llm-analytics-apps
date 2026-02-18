@@ -120,8 +120,7 @@ function Screens() {
       }
     } else if (!isFocused && provider.options && screen !== "option_selector") {
       const matchedOption = provider.options.find(
-        (option) =>
-          input.toLowerCase() === option.shortcutKey.toLowerCase(),
+        (option) => input.toLowerCase() === option.shortcutKey.toLowerCase(),
       );
 
       if (matchedOption) {
