@@ -11,22 +11,13 @@ This is a demonstration repository showcasing PostHog AI SDK integrations with m
 ### Running the Applications
 
 ```bash
-# Python implementation
-cd python && ./run.sh
-
-# Node.js implementation
-cd node && ./run.sh
-
-# Or use the Makefile
-make run-python
-make run-node
+pnpm start
 ```
 
-The `run.sh` scripts automatically:
-- Set up virtual environments (Python) or install dependencies (Node.js)
-- Handle local SDK development paths (via `.env` configuration)
-- Install required packages
-- Start the interactive CLI
+The unified CLI automatically:
+- Starts and manages runtime adapters
+- Creates the Python runtime venv with `uv` when needed
+- Loads providers for the selected runtime
 
 ### Debug Mode
 
@@ -37,10 +28,9 @@ Enable detailed API call logging in two ways:
 DEBUG=1
 ```
 
-**Option 2: Use the debug make targets:**
+**Option 2: run with DEBUG in shell:**
 ```bash
-make run-python-debug
-make run-node-debug
+DEBUG=1 pnpm start
 ```
 
 When enabled, debug mode will log:
@@ -71,15 +61,13 @@ self._debug_log("Custom Title", data)
 this.debugLog("Custom Title", data);
 ```
 
-See `python/providers/anthropic.py` and `node/src/providers/anthropic.ts` for usage examples.
+See `runtimes/python/legacy_providers/anthropic.py` and `runtimes/node/providers/anthropic.ts` for usage examples.
 
-### Building and Development (Node.js)
+### Building and Development (Node Runtime)
 
 ```bash
-cd node
-npm run build    # Compile TypeScript to dist/
-npm run dev      # Run directly with ts-node (no build step)
-npm run clean    # Remove dist/ directory
+pnpm build:runtime-node   # Compile runtimes/node TypeScript
+pnpm dev                  # Watch CLI + runtime TypeScript and run app
 ```
 
 **TypeScript Configuration:**
@@ -105,41 +93,20 @@ npm run clean    # Remove dist/ directory
 
 **Test Scripts:**
 ```bash
-# Python weather tool test
-make test-python-weather
-# or
-cd python && ./scripts/run_test.sh
+# Use unified CLI test modes and Runtime Tools screen instead.
 
-# Node.js weather tool test
-cd node && ./scripts/run_test.sh
+# Node runtime tests are exercised via the unified CLI modes/tools.
 ```
 
 These scripts test the weather tool functionality automatically across all providers.
 
 ### Python Package Management
 
-```bash
-# Install dependencies only (don't run app)
-make python-install
-
-# Clean reinstall (removes existing posthog from venv first)
-make python-install-reset
-
-# Install with local PostHog SDK
-make python-install-local POSTHOG_PYTHON_PATH=/path/to/posthog-python
-```
-
-These targets are useful when switching between local SDK development and published packages.
+Python runtime dependencies are managed by the runtime adapter using `uv`.
 
 ### Trace Generator Tool
 
-```bash
-cd python/trace-generator && ./run.sh
-
-# Or use the make target
-make run-trace-generator
-make run-trace-generator-debug
-```
+Use the Runtime Tools screen in the CLI (`T`) and select `Trace Generator`.
 
 Creates complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder.
 
@@ -147,7 +114,7 @@ Creates complex nested LLM trace data for testing PostHog analytics. Features pr
 
 ### Dual Implementation Structure
 
-The repository maintains **parallel implementations** in Python (`python/`) and Node.js (`node/`), with matching provider abstractions and functionality. Both implementations share:
+The repository uses runtime adapters under `runtimes/python/` and `runtimes/node/`, with matching provider abstractions and functionality. Both share:
 - A common `.env` configuration at the root
 - The same CLI menu structure and test modes
 - Equivalent provider implementations (Anthropic, OpenAI, Gemini, LangChain, etc.)
@@ -167,7 +134,7 @@ All provider implementations inherit from these base classes and implement:
 
 ### Provider Implementations
 
-#### Python Providers (`python/providers/`)
+#### Python Providers (`runtimes/python/legacy_providers/`)
 - `anthropic.py` / `anthropic_streaming.py`
 - `gemini.py` / `gemini_streaming.py`
 - `openai.py` / `openai_chat.py` / `openai_streaming.py` / `openai_chat_streaming.py`
@@ -176,7 +143,7 @@ All provider implementations inherit from these base classes and implement:
 - `langchain.py`
 - `litellm_provider.py`
 
-#### Node.js Providers (`node/src/providers/`)
+#### Node Runtime Providers (`runtimes/node/providers/`)
 - `anthropic.ts` / `anthropic-streaming.ts`
 - `gemini.ts` / `gemini-streaming.ts`
 - `openai.ts` / `openai-chat.ts` / `openai-streaming.ts` / `openai-chat-streaming.ts`
@@ -189,9 +156,9 @@ All provider implementations inherit from these base classes and implement:
 
 ### PostHog Integration
 
-All providers receive a shared PostHog client instance (`posthog_client` / `posthogClient`) initialized in the main entry files:
-- Python: `python/main.py` creates a global `posthog` client
-- Node.js: `node/src/index.ts` creates a global `posthog` client
+All providers receive a shared PostHog client instance (`posthog_client` / `posthogClient`) initialized by runtime adapters:
+- Python runtime: `runtimes/python/adapter.py`
+- Node runtime: `runtimes/node/adapter.ts`
 
 Providers use the PostHog AI SDK wrappers (e.g., `@posthog/ai` for Node.js, `posthog` Python SDK with AI features) to automatically track LLM events including traces, spans, and generations.
 
@@ -308,8 +275,8 @@ All providers implement a weather tool that demonstrates function/tool calling:
 - Additional data: Humidity, wind speed, precipitation, weather conditions
 
 **Implementation location:**
-- Python: `python/providers/base.py` - `get_weather()` method
-- Node.js: `node/src/providers/base.ts` - `getWeather()` method
+- Python: `runtimes/python/legacy_providers/base.py` - `get_weather()` method
+- Node runtime: `runtimes/node/providers/base.ts` - `getWeather()` method
 
 Each provider must convert its provider-specific tool calling format to/from the standard weather tool interface.
 
@@ -332,7 +299,7 @@ When `ENABLE_AI_SESSION_ID=True` in `.env`, all traces within a single CLI sessi
 
 ### Trace Generator Event Types
 
-The trace generator (`python/trace-generator/trace_generator.py`) creates three event types:
+The trace generator (`runtimes/python/tools/trace-generator/trace_generator.py`) creates three event types:
 - `$ai_trace`: Top-level trace events
 - `$ai_span`: Intermediate span events (can be nested)
 - `$ai_generation`: LLM generation events with model and token information

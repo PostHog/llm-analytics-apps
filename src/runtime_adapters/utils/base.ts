@@ -1,4 +1,4 @@
-import type { Message, Provider } from "../../types.js";
+import type { Message, Provider, RuntimeTool } from "../../types.js";
 
 export default abstract class RuntimeAdapter {
   abstract id(): string;
@@ -59,4 +59,18 @@ export default abstract class RuntimeAdapter {
   ): Promise<Message>;
 
   abstract runModeTest(providerId: string, mode: string): Promise<Message>;
+
+  /**
+   * Runtime-specific utility tools surfaced in the CLI.
+   */
+  async getTools(): Promise<RuntimeTool[]> {
+    return [];
+  }
+
+  /**
+   * Execute a runtime-specific utility tool and return its output as a message.
+   */
+  async runTool(_toolId: string, _providerId?: string): Promise<Message> {
+    throw new Error(`Runtime ${this.name()} does not support tools`);
+  }
 }

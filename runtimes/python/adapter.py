@@ -9,6 +9,7 @@ import sys
 import socket
 import json
 import signal
+import subprocess
 from pathlib import Path
 from posthog import Posthog
 
@@ -18,6 +19,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 from providers import discover_providers
 
 SOCKET_PATH = "/tmp/llm-analytics-python.sock"
+PYTHON_RUNTIME_ROOT = Path(__file__).parent
+PYTHON_TOOLS_ROOT = PYTHON_RUNTIME_ROOT / "tools"
+TOOL_TIMEOUT_SECONDS = 60
 
 
 class RuntimeAdapter:
@@ -40,6 +44,34 @@ class RuntimeAdapter:
             self.providers[name.lower()] = provider
 
         print(f"Loaded providers: {list(self.providers.keys())}", file=sys.stderr)
+        self.tools = [
+            {
+                "id": "python_tool_call_selected_provider",
+                "name": "Tool Call Smoke Test (Selected Provider)",
+                "description": "Runs a weather tool-call test through the active provider.",
+            },
+            {
+                "id": "python_message_selected_provider",
+                "name": "Message Smoke Test (Selected Provider)",
+                "description": "Runs a simple message test through the active provider.",
+            },
+            {
+                "id": "python_trace_generator",
+                "name": "Trace Generator",
+                "description": "Runs trace generator in non-interactive mode.",
+                "command": sys.executable,
+                "args": ["trace_generator.py", "--quick"],
+                "cwd": str(PYTHON_TOOLS_ROOT / "trace-generator"),
+            },
+            {
+                "id": "python_screenshot_demo",
+                "name": "Screenshot Demo",
+                "description": "Runs screenshot demo in non-interactive mode.",
+                "command": sys.executable,
+                "args": ["screenshot_demo.py", "--tools"],
+                "cwd": str(PYTHON_TOOLS_ROOT / "screenshot-demo"),
+            },
+        ]
 
     def handle_message(self, message):
         """Handle incoming JSON message"""
@@ -59,6 +91,10 @@ class RuntimeAdapter:
                 return self.chat(data.get("provider"), data.get("messages", []))
             elif action == "run_mode_test":
                 return self.run_mode_test(data.get("provider"), data.get("mode"))
+            elif action == "list_tools":
+                return self.list_tools()
+            elif action == "run_tool":
+                return self.run_tool(data.get("tool_id"), data.get("provider"))
             else:
                 return {"error": f"Unknown action: {action}"}
 
@@ -182,6 +218,98 @@ class RuntimeAdapter:
             }}
         except Exception as e:
             return {"error": f"Mode test failed: {str(e)}"}
+
+    def list_tools(self):
+        return {
+            "tools": [
+                {
+                    "id": tool["id"],
+                    "name": tool["name"],
+                    "description": tool.get("description"),
+                }
+                for tool in self.tools
+            ]
+        }
+
+    def run_tool(self, tool_id, provider_name=None):
+        if not tool_id:
+            return {"error": "tool_id is required"}
+
+        tool = next((candidate for candidate in self.tools if candidate["id"] == tool_id), None)
+        if tool is None:
+            return {"error": f"Unknown tool: {tool_id}"}
+
+        if tool_id in {"python_tool_call_selected_provider", "python_message_selected_provider"}:
+            if not provider_name:
+                return {"error": "provider is required for this runtime tool"}
+
+            mode = "tool_call_test" if tool_id == "python_tool_call_selected_provider" else "message_test"
+            mode_result = self.run_mode_test(provider_name, mode)
+            if "error" in mode_result:
+                return mode_result
+
+            message = mode_result.get("message", {})
+            text_blocks = [
+                block.get("text", "")
+                for block in message.get("content", [])
+                if block.get("type") == "text"
+            ]
+            output = "\n".join(text_blocks).strip() or "No output."
+            title = "Tool Call Smoke Test" if mode == "tool_call_test" else "Message Smoke Test"
+
+            return {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Tool: {title}\nProvider: {provider_name}\n\n{output}",
+                        }
+                    ],
+                }
+            }
+
+        try:
+            result = subprocess.run(
+                [tool["command"], *tool["args"]],
+                cwd=tool["cwd"],
+                capture_output=True,
+                text=True,
+                env=os.environ.copy(),
+                timeout=TOOL_TIMEOUT_SECONDS,
+                check=False,
+            )
+            timed_out = False
+            exit_code = result.returncode
+            stdout = result.stdout.strip()
+            stderr = result.stderr.strip()
+        except subprocess.TimeoutExpired as e:
+            timed_out = True
+            exit_code = "timeout"
+            stdout = (e.stdout or "").strip()
+            stderr = (e.stderr or "").strip()
+        except Exception as e:
+            return {"error": f"Tool execution failed: {str(e)}"}
+
+        output = "\n".join(
+            [
+                f"Tool: {tool['name']}",
+                f"Exit code: {exit_code}{' (timed out)' if timed_out else ''}",
+                "",
+                f"STDOUT:\n{stdout}" if stdout else "STDOUT: (empty)",
+                "",
+                f"STDERR:\n{stderr}" if stderr else "STDERR: (empty)",
+            ]
+        )
+        if timed_out:
+            output += f"\n\nExecution timed out after {TOOL_TIMEOUT_SECONDS}s."
+
+        return {
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": output}],
+            }
+        }
 
     def run(self):
         """Start Unix socket server"""

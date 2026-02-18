@@ -23,15 +23,20 @@ import { useProvider } from "./provider_context.js";
 import { useOptions } from "./option_context.js";
 import { ModeProvider } from "./mode_context.js";
 import { ModeRunner } from "./mode_runner.js";
+import { ToolSelector } from "./tool_selector.js";
+import { ToolRunner } from "./tool_runner.js";
 import { config } from "dotenv";
 import fs from "fs";
 import path from "path";
+import { syncLocalPostHogApiKey } from "./local_posthog_sync.js";
 
 // Load environment variables
 const cwdEnvPath = path.join(process.cwd(), ".env");
 if (fs.existsSync(cwdEnvPath)) {
   config({ path: cwdEnvPath });
 }
+
+await syncLocalPostHogApiKey(cwdEnvPath);
 
 // Validate required environment variables
 const requiredEnvVars = ["POSTHOG_API_KEY", "OPENAI_API_KEY"];
@@ -118,6 +123,10 @@ function Screens() {
       if (!isFocused) {
         navigate("provider_selector");
       }
+    } else if (input === "t" || input === "T") {
+      if (!isFocused) {
+        navigate("tool_selector");
+      }
     } else if (!isFocused && provider.options && screen !== "option_selector") {
       const matchedOption = provider.options.find(
         (option) => input.toLowerCase() === option.shortcutKey.toLowerCase(),
@@ -151,6 +160,10 @@ function Screens() {
       return <OptionSelector />;
     case "mode_runner":
       return <ModeRunner />;
+    case "tool_selector":
+      return <ToolSelector />;
+    case "tool_runner":
+      return <ToolRunner />;
   }
 }
 

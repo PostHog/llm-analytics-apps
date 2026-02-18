@@ -73,3 +73,9 @@ export type Provider = {
   options?: ProviderOption[];
   input_modes: InputMode[];
 };
+
+export type RuntimeTool = {
+  id: string;
+  name: string;
+  description?: string;
+};

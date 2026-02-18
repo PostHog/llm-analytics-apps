@@ -16,6 +16,7 @@ export const Statusbar = () => {
   const cols = stdout.columns || 120;
   const isRuntimeActive = screen === "runtime_selector";
   const isProviderActive = screen === "provider_selector";
+  const isToolsActive = screen === "tool_selector" || screen === "tool_runner";
 
   const bg = "#B62AD9";
   const sep = " \u2502 ";
@@ -33,6 +34,11 @@ export const Statusbar = () => {
     {
       text: `P: ${provider.name}`,
       color: isProviderActive ? "yellowBright" : "white",
+    },
+    { text: sep, color: "white" },
+    {
+      text: "T: Tools",
+      color: isToolsActive ? "yellowBright" : "white",
     },
   ];
 

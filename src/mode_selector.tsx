@@ -131,6 +131,7 @@ export function ModeSelector() {
       reason:
         "Unavailable: use an image generation provider (OpenAI/Gemini Image).",
     },
+    { label: "Runtime Tools", value: "tool_selector" },
     { label: "Exit", value: "__exit__" },
   ];
 

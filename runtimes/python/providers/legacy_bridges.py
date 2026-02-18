@@ -9,7 +9,7 @@ from .base import BaseProvider
 
 
 LEGACY_PROVIDERS_DIR = (
-    Path(__file__).resolve().parents[3] / "python" / "providers"
+    Path(__file__).resolve().parents[1] / "legacy_providers"
 )
 
 

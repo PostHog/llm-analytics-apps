@@ -4,6 +4,7 @@ import { useOptions } from "./option_context.js";
 import { useScreen } from "./screen_context.js";
 import { useMode } from "./mode_context.js";
 import { useFocus } from "./focus_context.js";
+import { useRuntime } from "./runtime_context.js";
 
 const MODE_LABELS: Record<string, string> = {
   chat: "Chat",
@@ -21,6 +22,7 @@ type Segment = { text: string; color: string; bold?: boolean };
 export const BottomBar = () => {
   const { stdout } = useStdout();
   const { provider } = useProvider();
+  const { runtime } = useRuntime();
   const { optionValues } = useOptions();
   const { mode } = useMode();
   const { isFocused } = useFocus();
@@ -30,6 +32,8 @@ export const BottomBar = () => {
   const modeDisplay =
     screen === "chat" || screen === "mode_runner"
       ? (MODE_LABELS[mode] ?? mode)
+      : screen === "tool_selector" || screen === "tool_runner"
+        ? "Tools"
       : "Menu";
 
   const optionTokens = (provider.options || []).map((option) => {
@@ -47,6 +51,8 @@ export const BottomBar = () => {
   const hintText =
     screen === "mode_runner"
       ? "R: Rerun \u2502 \u2191\u2193: Scroll \u2502 PgUp/PgDn: Page"
+      : screen === "tool_runner"
+        ? "R: Rerun \u2502 \u2191\u2193: Scroll \u2502 PgUp/PgDn: Page"
       : screen === "chat"
         ? isFocused
           ? "Enter: Send \u2502 Esc: Settings"
@@ -59,6 +65,39 @@ export const BottomBar = () => {
   const parts: Segment[] = [
     { text: ` ${modeDisplay}`, color: "cyanBright", bold: true },
   ];
+
+  const depsMode = (() => {
+    if (runtime.id() === "node") {
+      if (process.env["POSTHOG_JS_PATH"]) {
+        return "JS:Local";
+      }
+      if (
+        process.env["POSTHOG_JS_AI_VERSION"] ||
+        process.env["POSTHOG_JS_NODE_VERSION"]
+      ) {
+        return "JS:Pinned";
+      }
+      return "JS:Default";
+    }
+
+    if (runtime.id() === "python") {
+      const liteLLMTag = process.env["LITELLM_PATH"] ? "+LiteLLMLocal" : "";
+      if (process.env["POSTHOG_PYTHON_PATH"]) {
+        return `PY:Local${liteLLMTag}`;
+      }
+      if (process.env["POSTHOG_PYTHON_VERSION"]) {
+        return `PY:Pinned${liteLLMTag}`;
+      }
+      return `PY:Default${liteLLMTag}`;
+    }
+
+    return "";
+  })();
+
+  if (depsMode) {
+    parts.push({ text: sep, color: "white" });
+    parts.push({ text: depsMode, color: "greenBright" });
+  }
 
   if (optionTokens.length > 0) {
     parts.push({ text: sep, color: "white" });

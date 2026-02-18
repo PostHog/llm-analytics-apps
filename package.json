@@ -7,14 +7,28 @@
   "type": "module",
   "main": "dist/main.js",
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.18",
+    "@ai-sdk/google": "^3.0.10",
+    "@ai-sdk/openai": "^3.0.14",
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@google/genai": "^1.38.0",
+    "@langchain/core": "^0.3.80",
+    "@langchain/openai": "^0.3.17",
+    "@mastra/core": "^0.24.9",
+    "@posthog/ai": "^7.5.3",
+    "ai": "^6.0.45",
     "dotenv": "^17.3.1",
     "ink": "^6.7.0",
     "ink-link": "^5.0.0",
     "ink-select-input": "^6.2.0",
     "ink-text-input": "^6.0.0",
+    "langchain": "^0.3.37",
     "mime-types": "^3.0.2",
+    "openai": "^4.104.0",
+    "posthog-node": "^5.24.1",
     "react": "^19.2.4",
-    "terminal-image": "^4.2.0"
+    "terminal-image": "^4.2.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/mime-types": "^3.0.1",
@@ -27,10 +41,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "prettier --write .",
-    "build": "tsc",
+    "build": "pnpm build:cli && pnpm build:runtime-node",
+    "build:cli": "tsc -p tsconfig.json",
+    "build:runtime-node": "tsc -p runtimes/node/tsconfig.json",
+    "build:cli:watch": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "build:runtime-node:watch": "tsc -p runtimes/node/tsconfig.json --watch --preserveWatchOutput",
     "start": "pnpm build && node --enable-source-maps dist/main.js",
-    "dev": "sh -c 'pnpm build --watch & TSC_PID=$!; trap \"kill $TSC_PID\" EXIT INT TERM; node --watch --enable-source-maps dist/main.js'",
-    "dev:run": "node --watch --enable-source-maps dist/main.js",
+    "dev": "sh -c 'mkdir -p .logs; pnpm build:cli:watch > .logs/tsc-cli.log 2>&1 & CLI_TSC_PID=$!; pnpm build:runtime-node:watch > .logs/tsc-runtime-node.log 2>&1 & RUNTIME_TSC_PID=$!; trap \"kill $CLI_TSC_PID $RUNTIME_TSC_PID\" EXIT INT TERM; echo \"TS watch logs: .logs/tsc-cli.log, .logs/tsc-runtime-node.log\"; LLM_ANALYTICS_NO_ALT_SCREEN=1 node --watch --watch-preserve-output --enable-source-maps dist/main.js'",
+    "dev:run": "LLM_ANALYTICS_NO_ALT_SCREEN=1 node --watch --watch-preserve-output --enable-source-maps dist/main.js",
     "prepare": "husky"
   }
 }

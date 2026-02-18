@@ -8,7 +8,9 @@ export type Screen =
   | "runtime_selector"
   | "provider_selector"
   | "option_selector"
-  | "mode_runner";
+  | "mode_runner"
+  | "tool_selector"
+  | "tool_runner";
 
 const ScreenContext = createContext<{
   screen: Screen;
@@ -17,11 +19,15 @@ const ScreenContext = createContext<{
   setCurrentOption: (
     option: Extract<ProviderOption, { type: "enum" }> | null,
   ) => void;
+  currentToolId: string | null;
+  setCurrentToolId: (toolId: string | null) => void;
 }>({
   screen: "mode_selector",
   navigate: () => {},
   currentOption: null,
   setCurrentOption: () => {},
+  currentToolId: null,
+  setCurrentToolId: () => {},
 });
 
 export function ScreenProvider({ children }: { children: React.ReactNode }) {
@@ -30,10 +36,18 @@ export function ScreenProvider({ children }: { children: React.ReactNode }) {
     ProviderOption,
     { type: "enum" }
   > | null>(null);
+  const [currentToolId, setCurrentToolId] = useState<string | null>(null);
 
   return (
     <ScreenContext.Provider
-      value={{ screen, navigate: setScreen, currentOption, setCurrentOption }}
+      value={{
+        screen,
+        navigate: setScreen,
+        currentOption,
+        setCurrentOption,
+        currentToolId,
+        setCurrentToolId,
+      }}
     >
       {children}
     </ScreenContext.Provider>
@@ -54,4 +68,12 @@ export function useCurrentOption() {
 
 export function useSetCurrentOption() {
   return useContext(ScreenContext).setCurrentOption;
+}
+
+export function useCurrentToolId() {
+  return useContext(ScreenContext).currentToolId;
+}
+
+export function useSetCurrentToolId() {
+  return useContext(ScreenContext).setCurrentToolId;
 }

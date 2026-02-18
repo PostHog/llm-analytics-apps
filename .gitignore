@@ -44,6 +44,9 @@ pids
 *.seed
 *.pid.lock
 runtimes/node/*.sock
+runtimes/node/.deps-config.json
+runtimes/node/.local-build-cache.json
+runtimes/python/.deps-config.json
 runtimes/python/.uv-cache/
 
 # Coverage directory used by tools like istanbul

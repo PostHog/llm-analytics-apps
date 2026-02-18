@@ -6,7 +6,7 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
 
 ### For Python:
 - Python 3.8 or higher
-- pip package manager
+- uv package manager
 
 ### For Node.js:
 - Node.js 24 or higher
@@ -24,6 +24,13 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
    - `OPENAI_API_KEY`: Your OpenAI API key
    - `POSTHOG_API_KEY`: Your PostHog API key
    - `POSTHOG_HOST`: PostHog host (defaults to https://app.posthog.com)
+   - Optional Node package overrides:
+     - `POSTHOG_JS_PATH` (local posthog-js monorepo path)
+     - `POSTHOG_JS_AI_VERSION` / `POSTHOG_JS_NODE_VERSION` (pinned npm versions)
+   - Optional Python package overrides:
+     - `POSTHOG_PYTHON_PATH` (local posthog-python path)
+     - `POSTHOG_PYTHON_VERSION` (pinned PyPI version)
+     - `LITELLM_PATH` (local litellm path)
 
 2. **Run the application:**
 
@@ -37,23 +44,21 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
    ```bash
    pnpm dev
    ```
+   
+   When `POSTHOG_HOST=http://localhost:8010`, the CLI automatically syncs
+   `POSTHOG_API_KEY` from your local PostHog instance at startup.
 
-   Or from repo root:
-   ```bash
-   make run-cli
-   ```
+### Runtime Tools (via CLI)
 
-   For Python:
-   ```bash
-   cd python
-   ./run.sh
-   ```
+Runtime-specific tools are exposed directly in the unified shell:
 
-   For Node.js:
-   ```bash
-   cd node
-   ./run.sh
-   ```
+- Press `T` from the menu to open Runtime Tools.
+- Select a tool and run it in-place.
+- Output is shown in the TUI (`R` to rerun, scroll supported).
+
+Runtime setup logs are written to:
+- `.logs/runtime-node-setup.log`
+- `.logs/runtime-python-setup.log`
 
 ### Unified Shell Defaults
 
@@ -62,11 +67,6 @@ Example implementations of various LLM providers using PostHog's AI SDKs. This r
 - Streaming: `On`
 
 Provider options (for example `S` streaming, `T` thinking) are available from selectors and chat.
-
-The `run.sh` script will automatically:
-- Set up a virtual environment (Python) or install dependencies (Node)
-- Install all required packages
-- Start the interactive CLI
 
 ## 🎮 Usage
 
@@ -117,14 +117,6 @@ the distribution of primes and their properties modulo 4...
 🤖 Bot: Yes, there are infinitely many prime numbers of the form 4k + 3...
 ```
 
-### 🎯 LLM Trace Generator
-An interactive tool for creating complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder for creating arbitrarily complex structures.
-
-```bash
-cd python/trace-generator
-./run.sh
-```
-
 ## 🛠️ Development
 
 ### Local Development with PostHog SDKs
@@ -135,12 +127,7 @@ If you're developing the PostHog SDKs locally, you can use local paths instead o
    ```bash
    # For local PostHog SDK development
    POSTHOG_PYTHON_PATH=/../posthog-python
-   POSTHOG_JS_PATH=/../posthog-js
    ```
-
-2. Run the application normally with `./run.sh`
-
-The scripts will automatically detect and use your local SDK versions.
 
 ## 📝 License
 

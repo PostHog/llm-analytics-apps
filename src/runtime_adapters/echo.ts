@@ -1,5 +1,5 @@
 import RuntimeAdapter from "./utils/base.js";
-import type { Message, Provider } from "../types.js";
+import type { Message, Provider, RuntimeTool } from "../types.js";
 
 export default class EchoAdapter extends RuntimeAdapter {
   id(): string {
@@ -63,5 +63,9 @@ export default class EchoAdapter extends RuntimeAdapter {
     return this.chat(providerId, [
       { role: "user", content: [{ type: "text", text: "echo mode test" }] },
     ]);
+  }
+
+  override async getTools(): Promise<RuntimeTool[]> {
+    return [];
   }
 }
