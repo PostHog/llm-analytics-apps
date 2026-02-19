@@ -69,7 +69,70 @@ class OpenAIProvider(BaseProvider):
                     },
                     "required": ["setup", "punchline"]
                 }
-            }
+            },
+            {
+                "type": "function",
+                "name": "roll_dice",
+                "description": "Roll one or more dice with a specified number of sides",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "num_dice": {"type": "integer", "description": "Number of dice to roll (default: 1)"},
+                        "sides": {"type": "integer", "description": "Number of sides per die (default: 6)"},
+                    },
+                    "required": []
+                }
+            },
+            {
+                "type": "function",
+                "name": "check_time",
+                "description": "Get the current time in a specific timezone (e.g., 'America/New_York', 'Europe/London', 'Asia/Tokyo')",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "timezone": {"type": "string", "description": "IANA timezone name (e.g., 'US/Eastern', 'Europe/Paris')"},
+                    },
+                    "required": ["timezone"]
+                }
+            },
+            {
+                "type": "function",
+                "name": "calculate",
+                "description": "Evaluate a mathematical expression (basic arithmetic: +, -, *, /, parentheses)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {"type": "string", "description": "The math expression to evaluate (e.g., '(2 + 3) * 4')"},
+                    },
+                    "required": ["expression"]
+                }
+            },
+            {
+                "type": "function",
+                "name": "convert_units",
+                "description": "Convert a value between common units (km/miles, kg/lbs, celsius/fahrenheit, meters/feet, liters/gallons)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "description": "The numeric value to convert"},
+                        "from_unit": {"type": "string", "description": "The source unit (e.g., 'km', 'celsius', 'kg')"},
+                        "to_unit": {"type": "string", "description": "The target unit (e.g., 'miles', 'fahrenheit', 'lbs')"},
+                    },
+                    "required": ["value", "from_unit", "to_unit"]
+                }
+            },
+            {
+                "type": "function",
+                "name": "generate_inspirational_quote",
+                "description": "Get an inspirational quote, optionally on a specific topic (general, perseverance, creativity, success, teamwork)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {"type": "string", "description": "Topic for the quote (general, perseverance, creativity, success, teamwork)"},
+                    },
+                    "required": []
+                }
+            },
         ]
     
     def get_name(self):
@@ -162,42 +225,14 @@ class OpenAIProvider(BaseProvider):
                     except json.JSONDecodeError:
                         arguments = {}
 
-                    if output_item.name == "get_weather":
-                        latitude = arguments.get("latitude", 0.0)
-                        longitude = arguments.get("longitude", 0.0)
-                        location_name = arguments.get("location_name")
-                        weather_result = self.get_weather(latitude, longitude, location_name)
-                        tool_result_text = self.format_tool_result("get_weather", weather_result)
+                    tool_result = self.execute_tool(output_item.name, arguments)
+                    if tool_result is not None:
+                        tool_result_text = self.format_tool_result(output_item.name, tool_result)
                         display_parts.append(tool_result_text)
-
-                        # Store tool call info to add to conversation history
-                        tool_call_for_history = {
-                            "id": call_id,
-                            "name": output_item.name,
-                            "result": weather_result
-                        }
-                    elif output_item.name == "tell_joke":
-                        setup = arguments.get("setup", "")
-                        punchline = arguments.get("punchline", "")
-                        joke_result = self.tell_joke(setup, punchline)
-                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
-                        display_parts.append(tool_result_text)
-
-                        # Store tool call info to add to conversation history
-                        tool_call_for_history = {
-                            "id": call_id,
-                            "name": output_item.name,
-                            "result": joke_result
-                        }
-
-        # Add messages to conversation history
-        # For client-side history management (not using previous_response_id),
-        # we add tool results as assistant messages with output_text
-        if 'tool_call_for_history' in locals():
-            assistant_content_items.append({
-                "type": "output_text",
-                "text": tool_call_for_history["result"]
-            })
+                        assistant_content_items.append({
+                            "type": "output_text",
+                            "text": tool_result
+                        })
 
         if assistant_content_items:
             assistant_message = {

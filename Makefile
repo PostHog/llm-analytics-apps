@@ -1,4 +1,4 @@
-.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace demo-data demo-data-quick demo-data-negative
+.PHONY: run-python run-node run-python-debug run-node-debug run-trace-generator run-trace-generator-debug run-screenshot-demo run-screenshot-demo-debug python-install python-install-reset python-install-local test-python-weather ingest-trace demo-data demo-data-quick demo-data-tools demo-data-negative
 
 run-python:
 	@cd python && ./run.sh
@@ -48,6 +48,10 @@ demo-data:
 ## Quick demo data (3 short conversations)
 demo-data-quick:
 	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 3 --max-turns 3 --parallel 3 --providers openai_chat
+
+## Generate tool-heavy demo conversations (weather lookups, jokes across multiple cities)
+demo-data-tools:
+	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --tools --conversations 5 --max-turns 6 --parallel 3
 
 ## Generate negative/angry demo conversations for sentiment testing
 demo-data-negative:

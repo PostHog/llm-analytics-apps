@@ -46,22 +46,13 @@ class OpenAIChatProvider(BaseProvider):
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "latitude": {
-                                "type": "number",
-                                "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
-                            },
-                            "longitude": {
-                                "type": "number",
-                                "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
-                            },
-                            "location_name": {
-                                "type": "string",
-                                "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
-                            }
+                            "latitude": {"type": "number", "description": "The latitude of the location"},
+                            "longitude": {"type": "number", "description": "The longitude of the location"},
+                            "location_name": {"type": "string", "description": "A human-readable name for the location"},
                         },
-                        "required": ["latitude", "longitude", "location_name"]
-                    }
-                }
+                        "required": ["latitude", "longitude", "location_name"],
+                    },
+                },
             },
             {
                 "type": "function",
@@ -71,19 +62,86 @@ class OpenAIChatProvider(BaseProvider):
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "setup": {
-                                "type": "string",
-                                "description": "The setup or question part of the joke"
-                            },
-                            "punchline": {
-                                "type": "string",
-                                "description": "The punchline or answer part of the joke"
-                            }
+                            "setup": {"type": "string", "description": "The setup or question part of the joke"},
+                            "punchline": {"type": "string", "description": "The punchline or answer part of the joke"},
                         },
-                        "required": ["setup", "punchline"]
-                    }
-                }
-            }
+                        "required": ["setup", "punchline"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "roll_dice",
+                    "description": "Roll one or more dice with a specified number of sides",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "num_dice": {"type": "integer", "description": "Number of dice to roll (default: 1)"},
+                            "sides": {"type": "integer", "description": "Number of sides per die (default: 6)"},
+                        },
+                        "required": [],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "check_time",
+                    "description": "Get the current time in a specific timezone (e.g., 'America/New_York', 'Europe/London', 'Asia/Tokyo')",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "timezone": {"type": "string", "description": "IANA timezone name (e.g., 'US/Eastern', 'Europe/Paris')"},
+                        },
+                        "required": ["timezone"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculate",
+                    "description": "Evaluate a mathematical expression (basic arithmetic: +, -, *, /, parentheses)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "expression": {"type": "string", "description": "The math expression to evaluate (e.g., '(2 + 3) * 4')"},
+                        },
+                        "required": ["expression"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "convert_units",
+                    "description": "Convert a value between common units (km/miles, kg/lbs, celsius/fahrenheit, meters/feet, liters/gallons)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "value": {"type": "number", "description": "The numeric value to convert"},
+                            "from_unit": {"type": "string", "description": "The source unit (e.g., 'km', 'celsius', 'kg')"},
+                            "to_unit": {"type": "string", "description": "The target unit (e.g., 'miles', 'fahrenheit', 'lbs')"},
+                        },
+                        "required": ["value", "from_unit", "to_unit"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_inspirational_quote",
+                    "description": "Get an inspirational quote, optionally on a specific topic (general, perseverance, creativity, success, teamwork)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {"type": "string", "description": "Topic for the quote (general, perseverance, creativity, success, teamwork)"},
+                        },
+                        "required": [],
+                    },
+                },
+            },
         ]
     
     def get_name(self):
@@ -191,33 +249,14 @@ class OpenAIChatProvider(BaseProvider):
         # Process tool calls (execute tools and add results to history)
         if message.tool_calls:
             for tool_call in message.tool_calls:
-                tool_result = None
+                try:
+                    arguments = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    arguments = {}
 
-                if tool_call.function.name == "get_weather":
-                    try:
-                        arguments = json.loads(tool_call.function.arguments)
-                        latitude = arguments.get("latitude", 0.0)
-                        longitude = arguments.get("longitude", 0.0)
-                        location_name = arguments.get("location_name")
-                        tool_result = self.get_weather(latitude, longitude, location_name)
-                        display_parts.append(self.format_tool_result("get_weather", tool_result))
-                    except json.JSONDecodeError:
-                        tool_result = "Error parsing tool arguments"
-                        display_parts.append("❌ Error parsing tool arguments")
-
-                elif tool_call.function.name == "tell_joke":
-                    try:
-                        arguments = json.loads(tool_call.function.arguments)
-                        setup = arguments.get("setup", "")
-                        punchline = arguments.get("punchline", "")
-                        tool_result = self.tell_joke(setup, punchline)
-                        display_parts.append(self.format_tool_result("tell_joke", tool_result))
-                    except json.JSONDecodeError:
-                        tool_result = "Error parsing tool arguments"
-                        display_parts.append("❌ Error parsing tool arguments")
-
-                # Add tool result to conversation history
+                tool_result = self.execute_tool(tool_call.function.name, arguments)
                 if tool_result is not None:
+                    display_parts.append(self.format_tool_result(tool_call.function.name, tool_result))
                     self.messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,

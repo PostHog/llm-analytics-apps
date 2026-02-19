@@ -150,6 +150,18 @@ TOPICS = [
     "photography tips for beginners",
     "crafts and hobbies to try",
 
+    # Tool-triggering scenarios (weather + jokes)
+    "checking the weather in 5 different cities around the world",
+    "comparing weather between Tokyo, London, and New York right now",
+    "planning outdoor activities based on weather in multiple locations",
+    "asking for the current weather and a joke to lighten the mood",
+    "checking if it's good beach weather in several coastal cities",
+    "wanting weather updates for a multi-city road trip",
+    "asking about weather in their hometown and several vacation destinations",
+    "telling a series of jokes on different topics",
+    "wanting weather info for event planning in 3 different venues",
+    "asking for jokes about programming, weather, and animals",
+
     # Frustrated & Negative scenarios
     "complaining about a product that keeps breaking",
     "dealing with a billing error that won't get resolved",
@@ -227,6 +239,78 @@ USER_PERSONAS = [
     "someone having an absolutely terrible day who takes it out on the chat",
     "a person who insists the AI gave them wrong information last time and wants it fixed NOW",
 ]
+
+# Tool-triggering topics — these strongly encourage the LLM to call available tools
+TOOL_TOPICS = [
+    # Weather-heavy
+    "checking the weather in 5 different cities around the world",
+    "comparing weather between Tokyo, London, and New York right now",
+    "planning outdoor activities based on weather in multiple locations",
+    "checking if it's good beach weather in several coastal cities",
+    "wanting weather updates for a multi-city road trip",
+    "checking weather in Paris, Sydney, and Rio de Janeiro for holiday planning",
+    "planning a ski trip and checking weather in multiple mountain resorts",
+
+    # Jokes
+    "telling a series of jokes on different topics",
+    "asking for jokes about programming, weather, and animals",
+    "wanting a joke for each day of the week",
+
+    # Mixed weather + jokes
+    "asking for the current weather and a joke to lighten the mood",
+    "asking for weather in Dublin and a few Irish jokes",
+    "wanting the forecast in 4 cities and a joke for each one",
+
+    # Dice rolling
+    "playing a tabletop RPG and needing lots of dice rolls",
+    "settling a debate by rolling dice multiple times",
+    "running a probability experiment with different dice",
+
+    # Time zones
+    "checking what time it is in 5 different cities for scheduling a global meeting",
+    "figuring out the best time to call friends in Tokyo, London, and Sydney",
+    "comparing current times across US time zones",
+
+    # Calculator
+    "working through a series of math problems step by step",
+    "calculating tip amounts and splitting bills for a group dinner",
+    "doing unit price comparisons for grocery shopping",
+
+    # Unit conversion
+    "converting recipe measurements between metric and imperial",
+    "comparing distances in km and miles for a road trip",
+    "converting temperatures between celsius and fahrenheit for travel packing",
+
+    # Inspirational quotes
+    "needing motivational quotes for a team presentation",
+    "wanting inspirational quotes about perseverance and creativity",
+    "collecting quotes on different topics for a vision board",
+
+    # Multi-tool combos
+    "planning a world trip: check weather, convert currencies, check time zones",
+    "hosting an international party: time zones, weather, unit conversions, and jokes",
+    "a curious person who wants weather, time, a dice game, and some quotes all in one chat",
+    "asking for the weather, then a math problem, then a joke, then a quote — rapid fire",
+]
+
+# Personas that naturally ask about multiple things (triggering multiple tool calls)
+TOOL_PERSONAS = [
+    "a travel planner who always checks weather in multiple cities before recommending destinations",
+    "someone who wants weather for 3+ cities and a joke after each weather update",
+    "an event organizer checking weather across multiple venues and wanting icebreaker jokes",
+    "a curious person who keeps asking 'what about the weather in [new city]?' after every answer",
+    "someone planning a world trip who wants weather in at least 5 different cities",
+    "a parent planning weekend activities in different parks and wanting jokes for the kids",
+    "a data nerd who wants to compare weather across as many cities as possible",
+    "a tabletop gamer who constantly asks for dice rolls with different numbers of dice and sides",
+    "a remote worker who always needs to check what time it is in different time zones",
+    "a math tutor who asks the assistant to calculate and convert things as examples",
+    "someone who wants an inspirational quote after every answer, on different topics each time",
+    "a chaotic person who rapid-fires requests: weather, dice, time, jokes, quotes, calculations",
+]
+
+# Providers that have tool definitions wired up
+TOOL_CAPABLE_PROVIDERS = ["openai_chat", "anthropic", "openai"]
 
 # Available providers
 PROVIDERS = {
@@ -593,6 +677,11 @@ Available providers:
         help="Run N conversations in parallel (default: 1, sequential)",
     )
     parser.add_argument(
+        "--tools",
+        action="store_true",
+        help="Generate tool-heavy conversations (weather lookups, jokes). Forces tool-capable providers and tool-triggering topics.",
+    )
+    parser.add_argument(
         "--list-providers",
         action="store_true",
         help="List all available providers and exit",
@@ -648,7 +737,18 @@ Available providers:
         sys.exit(1)
 
     # Determine which providers to use
-    available_providers = args.providers or list(PROVIDERS.keys())
+    if args.tools:
+        available_providers = args.providers or TOOL_CAPABLE_PROVIDERS
+        # Validate that selected providers actually support tools
+        for p in available_providers:
+            if p not in TOOL_CAPABLE_PROVIDERS:
+                print(f"Warning: provider '{p}' may not support tools, skipping")
+        available_providers = [p for p in available_providers if p in TOOL_CAPABLE_PROVIDERS]
+        if not available_providers:
+            print(f"Error: no tool-capable providers selected. Available: {', '.join(TOOL_CAPABLE_PROVIDERS)}")
+            sys.exit(1)
+    else:
+        available_providers = args.providers or list(PROVIDERS.keys())
 
     verbose = not args.quiet
 
@@ -661,6 +761,8 @@ Available providers:
         print(f"Providers: {', '.join(available_providers)}")
         print(f"Delay between turns: {args.delay}s")
         print(f"Parallel workers: {args.parallel}")
+        if args.tools:
+            print(f"Mode: TOOLS (tool-heavy conversations)")
         if args.topic:
             print(f"Topic: {args.topic}")
         if args.persona:
@@ -678,13 +780,21 @@ Available providers:
         provider_key = random.choice(available_providers)
         # In parallel mode, we use quiet mode to avoid jumbled output
         use_verbose = verbose and args.parallel == 1
+
+        # Pick topic and persona — use tool-specific lists when --tools is set
+        topic = args.topic
+        persona = args.persona
+        if args.tools:
+            topic = topic or random.choice(TOOL_TOPICS)
+            persona = persona or random.choice(TOOL_PERSONAS)
+
         return run_conversation(
             provider_key=provider_key,
             max_turns=args.max_turns,
             verbose=use_verbose,
             delay_between_turns=args.delay,
-            topic=args.topic,
-            persona=args.persona,
+            topic=topic,
+            persona=persona,
             distinct_id=args.distinct_id,
         )
 
