@@ -3,7 +3,10 @@ from typing import List, Dict, Any, Optional, Generator
 from posthog import Posthog
 import os
 import json
+import math
 import random
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import requests
 from .constants import WEATHER_TEMP_MIN_CELSIUS, WEATHER_TEMP_MAX_CELSIUS
 
@@ -125,13 +128,134 @@ class BaseProvider(ABC):
         """Tell a joke with a setup and punchline"""
         return f"{setup}\n\n{punchline}"
 
+    def roll_dice(self, num_dice: int = 1, sides: int = 6) -> str:
+        """Roll dice and return results"""
+        num_dice = max(1, min(num_dice, 20))
+        sides = max(2, min(sides, 100))
+        rolls = [random.randint(1, sides) for _ in range(num_dice)]
+        total = sum(rolls)
+        if num_dice == 1:
+            return f"Rolled a d{sides}: {rolls[0]}"
+        return f"Rolled {num_dice}d{sides}: {rolls} (total: {total})"
+
+    def check_time(self, timezone_name: str = "UTC") -> str:
+        """Get the current time in a given timezone"""
+        try:
+            tz = ZoneInfo(timezone_name)
+            now = datetime.now(tz)
+            return f"The current time in {timezone_name} is {now.strftime('%I:%M %p on %A, %B %d, %Y')}"
+        except Exception:
+            now = datetime.now(timezone.utc)
+            return f"Unknown timezone '{timezone_name}'. UTC time is {now.strftime('%I:%M %p on %A, %B %d, %Y')}"
+
+    def calculate(self, expression: str) -> str:
+        """Evaluate a math expression safely"""
+        allowed = set("0123456789+-*/.() ")
+        if not all(c in allowed for c in expression):
+            return f"Invalid expression: '{expression}'. Only basic arithmetic is supported."
+        try:
+            result = eval(expression, {"__builtins__": {}}, {"math": math})
+            return f"{expression} = {result}"
+        except Exception as e:
+            return f"Error evaluating '{expression}': {e}"
+
+    def convert_units(self, value: float, from_unit: str, to_unit: str) -> str:
+        """Convert between common units"""
+        conversions = {
+            ("km", "miles"): lambda v: v * 0.621371,
+            ("miles", "km"): lambda v: v * 1.60934,
+            ("kg", "lbs"): lambda v: v * 2.20462,
+            ("lbs", "kg"): lambda v: v * 0.453592,
+            ("celsius", "fahrenheit"): lambda v: v * 9 / 5 + 32,
+            ("fahrenheit", "celsius"): lambda v: (v - 32) * 5 / 9,
+            ("meters", "feet"): lambda v: v * 3.28084,
+            ("feet", "meters"): lambda v: v * 0.3048,
+            ("liters", "gallons"): lambda v: v * 0.264172,
+            ("gallons", "liters"): lambda v: v * 3.78541,
+        }
+        key = (from_unit.lower(), to_unit.lower())
+        if key in conversions:
+            result = conversions[key](value)
+            return f"{value} {from_unit} = {result:.2f} {to_unit}"
+        return f"Cannot convert from {from_unit} to {to_unit}. Supported pairs: {', '.join(f'{a}->{b}' for a, b in conversions.keys())}"
+
+    def generate_inspirational_quote(self, topic: str = "general") -> str:
+        """Generate an inspirational quote on a topic"""
+        quotes = {
+            "general": [
+                "The only way to do great work is to love what you do. - Steve Jobs",
+                "In the middle of difficulty lies opportunity. - Albert Einstein",
+                "What you get by achieving your goals is not as important as what you become by achieving your goals. - Zig Ziglar",
+            ],
+            "perseverance": [
+                "It does not matter how slowly you go as long as you do not stop. - Confucius",
+                "Fall seven times, stand up eight. - Japanese Proverb",
+                "Perseverance is not a long race; it is many short races one after the other. - Walter Elliot",
+            ],
+            "creativity": [
+                "Creativity is intelligence having fun. - Albert Einstein",
+                "The chief enemy of creativity is good sense. - Pablo Picasso",
+                "Creativity takes courage. - Henri Matisse",
+            ],
+            "success": [
+                "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+                "The secret of success is to do the common thing uncommonly well. - John D. Rockefeller Jr.",
+                "Success usually comes to those who are too busy to be looking for it. - Henry David Thoreau",
+            ],
+            "teamwork": [
+                "Alone we can do so little; together we can do so much. - Helen Keller",
+                "Coming together is a beginning, staying together is progress, and working together is success. - Henry Ford",
+                "If everyone is moving forward together, then success takes care of itself. - Henry Ford",
+            ],
+        }
+        topic_quotes = quotes.get(topic.lower(), quotes["general"])
+        return random.choice(topic_quotes)
+
+    def execute_tool(self, tool_name: str, tool_input: dict) -> Optional[str]:
+        """Execute a tool by name and return the result, or None if unknown"""
+        if tool_name == "get_weather":
+            return self.get_weather(
+                tool_input.get("latitude", 0.0),
+                tool_input.get("longitude", 0.0),
+                tool_input.get("location_name"),
+            )
+        elif tool_name == "tell_joke":
+            return self.tell_joke(
+                tool_input.get("setup", ""),
+                tool_input.get("punchline", ""),
+            )
+        elif tool_name == "roll_dice":
+            return self.roll_dice(
+                tool_input.get("num_dice", 1),
+                tool_input.get("sides", 6),
+            )
+        elif tool_name == "check_time":
+            return self.check_time(tool_input.get("timezone", "UTC"))
+        elif tool_name == "calculate":
+            return self.calculate(tool_input.get("expression", "0"))
+        elif tool_name == "convert_units":
+            return self.convert_units(
+                tool_input.get("value", 0),
+                tool_input.get("from_unit", ""),
+                tool_input.get("to_unit", ""),
+            )
+        elif tool_name == "generate_inspirational_quote":
+            return self.generate_inspirational_quote(tool_input.get("topic", "general"))
+        return None
+
     def format_tool_result(self, tool_name: str, result: str) -> str:
         """Format tool result for display"""
-        if tool_name == "get_weather":
-            return f"🌤️  Weather: {result}"
-        elif tool_name == "tell_joke":
-            return f"😂 Joke: {result}"
-        return result
+        icons = {
+            "get_weather": "🌤️  Weather",
+            "tell_joke": "😂 Joke",
+            "roll_dice": "🎲 Dice",
+            "check_time": "🕐 Time",
+            "calculate": "🧮 Calculate",
+            "convert_units": "📏 Convert",
+            "generate_inspirational_quote": "💡 Quote",
+        }
+        label = icons.get(tool_name, tool_name)
+        return f"{label}: {result}"
 
     def _debug_log(self, title: str, data: Any, truncate: bool = True):
         """Log debug information in a clear, formatted way"""

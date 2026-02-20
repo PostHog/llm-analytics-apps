@@ -34,21 +34,12 @@ class AnthropicProvider(BaseProvider):
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "latitude": {
-                            "type": "number",
-                            "description": "The latitude of the location (e.g., 37.7749 for San Francisco)"
-                        },
-                        "longitude": {
-                            "type": "number",
-                            "description": "The longitude of the location (e.g., -122.4194 for San Francisco)"
-                        },
-                        "location_name": {
-                            "type": "string",
-                            "description": "A human-readable name for the location (e.g., 'San Francisco, CA' or 'Dublin, Ireland')"
-                        }
+                        "latitude": {"type": "number", "description": "The latitude of the location"},
+                        "longitude": {"type": "number", "description": "The longitude of the location"},
+                        "location_name": {"type": "string", "description": "A human-readable name for the location"},
                     },
-                    "required": ["latitude", "longitude", "location_name"]
-                }
+                    "required": ["latitude", "longitude", "location_name"],
+                },
             },
             {
                 "name": "tell_joke",
@@ -56,18 +47,70 @@ class AnthropicProvider(BaseProvider):
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "setup": {
-                            "type": "string",
-                            "description": "The setup of the joke, typically a question (e.g., 'Why did the chicken cross the road?')"
-                        },
-                        "punchline": {
-                            "type": "string",
-                            "description": "The punchline or answer to the joke (e.g., 'To get to the other side!')"
-                        }
+                        "setup": {"type": "string", "description": "The setup or question part of the joke"},
+                        "punchline": {"type": "string", "description": "The punchline or answer to the joke"},
                     },
-                    "required": ["setup", "punchline"]
-                }
-            }
+                    "required": ["setup", "punchline"],
+                },
+            },
+            {
+                "name": "roll_dice",
+                "description": "Roll one or more dice with a specified number of sides",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "num_dice": {"type": "integer", "description": "Number of dice to roll (default: 1)"},
+                        "sides": {"type": "integer", "description": "Number of sides per die (default: 6)"},
+                    },
+                    "required": [],
+                },
+            },
+            {
+                "name": "check_time",
+                "description": "Get the current time in a specific timezone (e.g., 'America/New_York', 'Europe/London', 'Asia/Tokyo')",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "timezone": {"type": "string", "description": "IANA timezone name (e.g., 'US/Eastern', 'Europe/Paris')"},
+                    },
+                    "required": ["timezone"],
+                },
+            },
+            {
+                "name": "calculate",
+                "description": "Evaluate a mathematical expression (basic arithmetic: +, -, *, /, parentheses)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {"type": "string", "description": "The math expression to evaluate (e.g., '(2 + 3) * 4')"},
+                    },
+                    "required": ["expression"],
+                },
+            },
+            {
+                "name": "convert_units",
+                "description": "Convert a value between common units (km/miles, kg/lbs, celsius/fahrenheit, meters/feet, liters/gallons)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "description": "The numeric value to convert"},
+                        "from_unit": {"type": "string", "description": "The source unit (e.g., 'km', 'celsius', 'kg')"},
+                        "to_unit": {"type": "string", "description": "The target unit (e.g., 'miles', 'fahrenheit', 'lbs')"},
+                    },
+                    "required": ["value", "from_unit", "to_unit"],
+                },
+            },
+            {
+                "name": "generate_inspirational_quote",
+                "description": "Get an inspirational quote, optionally on a specific topic (general, perseverance, creativity, success, teamwork)",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {"type": "string", "description": "Topic for the quote (general, perseverance, creativity, success, teamwork)"},
+                    },
+                    "required": [],
+                },
+            },
         ]
     
     def get_name(self):
@@ -140,24 +183,11 @@ class AnthropicProvider(BaseProvider):
                 elif content_block.type == "tool_use":
                     # Store the tool use block for message history
                     assistant_content.append(content_block)
-                    
-                    # Execute the tool and prepare result for display and history
-                    tool_name = content_block.name
-                    tool_input = content_block.input
 
-                    if tool_name == "get_weather":
-                        latitude = tool_input.get("latitude", 0.0)
-                        longitude = tool_input.get("longitude", 0.0)
-                        location_name = tool_input.get("location_name")
-                        weather_result = self.get_weather(latitude, longitude, location_name)
-                        tool_result_text = self.format_tool_result("get_weather", weather_result)
-                        tool_results.append(tool_result_text)
-                        display_parts.append(tool_result_text)
-                    elif tool_name == "tell_joke":
-                        setup = tool_input.get("setup", "")
-                        punchline = tool_input.get("punchline", "")
-                        joke_result = self.tell_joke(setup, punchline)
-                        tool_result_text = self.format_tool_result("tell_joke", joke_result)
+                    # Execute the tool and prepare result for display and history
+                    tool_result = self.execute_tool(content_block.name, content_block.input)
+                    if tool_result is not None:
+                        tool_result_text = self.format_tool_result(content_block.name, tool_result)
                         tool_results.append(tool_result_text)
                         display_parts.append(tool_result_text)
                 elif content_block.type == "text":
