@@ -25,6 +25,9 @@ openai-agents
 # LiteLLM
 litellm
 
+# Pydantic AI
+pydantic-ai
+
 # OpenTelemetry
 opentelemetry-api
 opentelemetry-sdk

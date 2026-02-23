@@ -21,6 +21,7 @@ from providers.openai_streaming import OpenAIStreamingProvider
 from providers.litellm_provider import LiteLLMProvider
 from providers.litellm_streaming import LiteLLMStreamingProvider
 from providers.openai_otel import OpenAIOtelProvider
+from providers.pydantic_ai_otel import PydanticAIOtelProvider
 from providers.openai_transcription import OpenAITranscriptionProvider
 from providers.openai_image import OpenAIImageProvider
 from providers.gemini_image import GeminiImageProvider
@@ -125,7 +126,8 @@ def display_providers(mode=None):
         "13": "OpenAI Transcriptions with Whisper",
         "14": "OpenAI Agents SDK",
         "15": "OpenAI Responses (Image Generation)",
-        "16": "Google Gemini (Image Generation)"
+        "16": "Google Gemini (Image Generation)",
+        "17": "Pydantic AI with OpenTelemetry"
     }
 
     # Filter providers for embeddings mode
@@ -164,7 +166,7 @@ def display_providers(mode=None):
 def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=None):
     """Get user's provider choice"""
     if valid_choices is None:
-        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"]
+        valid_choices = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17"]
 
     # Build prompt based on valid choices
     if len(valid_choices) == 1:
@@ -174,7 +176,7 @@ def get_provider_choice(allow_mode_change=False, allow_all=False, valid_choices=
     elif len(valid_choices) == 3:
         prompt = f"\nSelect a provider ({valid_choices[0]}-{valid_choices[2]})"
     else:
-        prompt = "\nSelect a provider (1-16)"
+        prompt = "\nSelect a provider (1-17)"
 
     if allow_all:
         prompt += ", 'a' for all providers"
@@ -265,6 +267,8 @@ def create_provider(choice, enable_thinking=False, thinking_budget=None):
         return OpenAIImageProvider(posthog)
     elif choice == "16":
         return GeminiImageProvider(posthog)
+    elif choice == "17":
+        return PydanticAIOtelProvider(posthog)
 
 def run_chat(provider):
     """Run the chat loop with the selected provider"""
@@ -512,7 +516,8 @@ def run_all_tests(mode):
         ("9", "OpenAI Chat Completions Streaming"),
         ("10", "LiteLLM (Sync)"),
         ("11", "LiteLLM (Async)"),
-        ("14", "OpenAI Agents SDK")
+        ("14", "OpenAI Agents SDK"),
+        ("17", "Pydantic AI with OpenTelemetry")
     ]
 
     # Filter providers for embeddings test (only those that support it)
