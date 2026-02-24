@@ -92,11 +92,15 @@ class OpenAIOtelProvider(BaseProvider):
             return
 
         # Create resource with service name
-        resource = Resource.create({
+        resource_attributes = {
             "service.name": "llm-analytics-app-otel",
             "service.version": "1.0.0",
             "deployment.environment": "development",
-        })
+        }
+        if self.debug_mode:
+            resource_attributes["posthog.ai.debug"] = "true"
+
+        resource = Resource.create(resource_attributes)
 
         # Create tracer provider
         tracer_provider = TracerProvider(resource=resource)
