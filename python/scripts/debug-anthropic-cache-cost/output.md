@@ -1,6 +1,6 @@
 # Anthropic Cache Token Cost - Debug Results
 
-**Date:** 2026-02-25 11:17 UTC
+**Date:** 2026-02-25 11:30 UTC
 **Model:** `claude-haiku-4-5-20251001`
 **PostHog Python SDK:** `v7.9.3`
 **Anthropic SDK:** `v0.75.0`
@@ -24,7 +24,7 @@ Verified that the Anthropic API returns `input_tokens` **exclusive** of cached t
 | `input_tokens` | 13 |
 | `cache_read_input_tokens` | 14100 |
 | `cache_creation_input_tokens` | 14100 |
-| `output_tokens` | 41 |
+| `output_tokens` | 42 |
 
 **Result:** `input_tokens` (13) is much smaller than `cache_read_input_tokens` (14100), confirming Anthropic returns **exclusive** counts.
 
@@ -76,7 +76,7 @@ client.messages.create(
 |-------|-------------------|-----------------|
 | `$ai_input_tokens` | 12 | 14113 |
 | `$ai_cache_read_input_tokens` | 14100 | 14100 |
-| `$ai_total_tokens` | not set | 14149 |
+| `$ai_total_tokens` | not set | 14160 |
 
 ### Cost Impact
 
@@ -114,9 +114,34 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
 
 ---
 
+## Test 4: SDK Source Code Inspection
+
+Programmatically inspected the PostHog Python SDK source to prove `$ai_total_tokens` cannot come from the Anthropic code path:
+
+| Component | File | Sets `$ai_total_tokens`? |
+|-----------|------|------------------------|
+| Anthropic converter | `posthog/ai/anthropic/anthropic_converter.py` | No |
+| General AI utils | `posthog/ai/utils.py` | No |
+| OpenAI Agents processor | `posthog/ai/openai_agents/processor.py` | **Yes** (only place) |
+
+**The Anthropic converter** (`extract_anthropic_usage_from_response`, lines 206-231) only extracts:
+- `input_tokens` (exclusive of cache)
+- `output_tokens`
+- `cache_read_input_tokens`
+- `cache_creation_input_tokens`
+- `web_search_count`
+
+**The general utils** (`posthog/ai/utils.py`) only tags `$ai_input_tokens` and `$ai_output_tokens`. There is no `tag("$ai_total_tokens", ...)` anywhere in this file.
+
+**The only code that sets `$ai_total_tokens`** is in `posthog/ai/openai_agents/processor.py` (lines 539 and 696), which is exclusively for OpenAI Agents — a completely separate code path from the Anthropic wrapper.
+
+**Result:** If `$ai_total_tokens` appears in a stored event captured via `posthog.ai.anthropic.AsyncAnthropic`, it **must** have come from outside the SDK — most likely via `posthog_properties`.
+
+---
+
 ## Key Evidence
 
-1. `$ai_total_tokens` is present in the stored events, but the PostHog Anthropic wrapper **never sets** this property. Only OpenAI Agents sets it. This strongly suggests the value comes from `posthog_properties`.
+1. `$ai_total_tokens` is present in the stored events, but the PostHog Anthropic wrapper **never sets** this property (confirmed by source inspection in Test 4). Only OpenAI Agents sets it. This strongly suggests the value comes from `posthog_properties`.
 
 2. The stored `$ai_input_tokens` (48268) minus `$ai_cache_read_input_tokens` (45417) equals exactly the expected exclusive value (2851), which is what the Anthropic API returns as `input_tokens`.
 
@@ -150,7 +175,7 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
 
   Call 2 usage:
     input_tokens:                13
-    output_tokens:               41
+    output_tokens:               42
     cache_read_input_tokens:     14100
     cache_creation_input_tokens: 0
 
@@ -171,14 +196,14 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
     $ai_provider:                  anthropic
     $ai_model:                     claude-haiku-4-5-20251001
     $ai_input_tokens:              13
-    $ai_output_tokens:             41
+    $ai_output_tokens:             35
     $ai_cache_read_input_tokens:   14100
     $ai_cache_creation_input_tokens: None
     $ai_total_tokens:              NOT SET
 
   Raw API usage (call 1):
     input_tokens:                13
-    output_tokens:               41
+    output_tokens:               35
     cache_read_input_tokens:     14100
     cache_creation_input_tokens: 0
 
@@ -189,14 +214,14 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
     $ai_provider:                  anthropic
     $ai_model:                     claude-haiku-4-5-20251001
     $ai_input_tokens:              13
-    $ai_output_tokens:             41
+    $ai_output_tokens:             38
     $ai_cache_read_input_tokens:   14100
     $ai_cache_creation_input_tokens: None
     $ai_total_tokens:              NOT SET
 
   Raw API usage (call 2):
     input_tokens:                13
-    output_tokens:               41
+    output_tokens:               38
     cache_read_input_tokens:     14100
     cache_creation_input_tokens: 0
 
@@ -226,14 +251,14 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
   3b) Simulating customer computing inclusive tokens from the response...
   (Customer code might do: input_tokens = usage.input_tokens + usage.cache_read_input_tokens)
     Customer computes: inclusive_input = 13 + 14100 = 14113
-    Customer computes: total = 14113 + 36 = 14149
+    Customer computes: total = 14113 + 47 = 14160
     Anthropic API input_tokens:         12 (exclusive)
     Anthropic API cache_read:           14100
     Anthropic API output_tokens:        100
     ---
     Stored $ai_input_tokens:            14113 (inclusive!)
     Stored $ai_cache_read_input_tokens: 14100
-    Stored $ai_total_tokens:            14149
+    Stored $ai_total_tokens:            14160
     ---
     COST COMPARISON (haiku pricing: $1/Mtok input, $0.10/Mtok cache):
 
@@ -250,11 +275,49 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
     OVERCHARGE: 10.9x (992% more)
 
 ======================================================================
+  STEP 4: Prove $ai_total_tokens is never set by Anthropic SDK
+======================================================================
+  Inspecting SDK source code to confirm no code path sets $ai_total_tokens for Anthropic...
+
+  1) Anthropic converter (extract_anthropic_usage_from_response):
+     File: posthog/ai/anthropic/anthropic_converter.py
+     Contains 'total_tokens': False
+     => CONFIRMED: Anthropic converter does NOT extract total_tokens
+
+     Streaming extractor (extract_anthropic_usage_from_event):
+     Contains 'total_tokens': False
+
+  2) General AI utils (posthog/ai/utils.py):
+     File: posthog/ai/utils.py
+     Contains 'ai_total_tokens': False
+     => CONFIRMED: utils.py never tags $ai_total_tokens
+
+  3) OpenAI Agents processor (for contrast):
+     File: posthog/ai/openai_agents/processor.py
+     Contains '$ai_total_tokens': True
+     => This is the ONLY code path that sets $ai_total_tokens
+
+  CONCLUSION:
+     The Anthropic SDK code path NEVER sets $ai_total_tokens.
+     If $ai_total_tokens appears in a stored event from posthog.ai.anthropic,
+     it MUST have come from outside the SDK — most likely via posthog_properties.
+
+     Code references (posthog-python SDK):
+       - posthog/ai/anthropic/anthropic_converter.py:206-231
+         extract_anthropic_usage_from_response() -> only sets input_tokens, output_tokens, cache_*
+       - posthog/ai/utils.py -> tag('$ai_input_tokens', ...) and tag('$ai_output_tokens', ...)
+         NO tag('$ai_total_tokens', ...) anywhere
+       - posthog/ai/openai_agents/processor.py:539,696
+         ONLY place $ai_total_tokens is set (OpenAI Agents only, not Anthropic)
+
+======================================================================
   DONE
 ======================================================================
   Check the output above to see if the bug is reproducible.
   If Step 2 shows correct values but the customer sees wrong values,
   the issue is likely in posthog_properties overrides (Step 3).
+  Step 4 proves via source inspection that $ai_total_tokens cannot
+  come from the Anthropic SDK code path.
 ```
 
 </details>

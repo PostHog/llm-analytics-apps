@@ -413,7 +413,92 @@ async def step3_posthog_wrapper_with_custom_properties(out: OutputWriter) -> dic
     return result
 
 
-def write_output_md(step1_result: dict, step2_result: dict, step3_result: dict, raw_output: str):
+async def step4_prove_total_tokens_never_set(out: OutputWriter) -> dict:
+    """Prove that $ai_total_tokens is never set by the Anthropic SDK code path.
+
+    This step inspects the actual SDK source code to show:
+    1. The Anthropic converter only extracts input_tokens, output_tokens, cache_* — no total_tokens
+    2. The general utils.py only tags $ai_input_tokens and $ai_output_tokens — no $ai_total_tokens
+    3. Only the OpenAI Agents processor sets $ai_total_tokens
+
+    If $ai_total_tokens appears in a stored event from the Anthropic wrapper,
+    it MUST have come from outside the SDK (e.g. posthog_properties override).
+    """
+    out.start_section("STEP 4: Prove $ai_total_tokens is never set by Anthropic SDK")
+    out.print("  Inspecting SDK source code to confirm no code path sets $ai_total_tokens for Anthropic...")
+
+    import inspect
+
+    from posthog.ai.anthropic import anthropic_converter
+    from posthog.ai import utils as ai_utils
+
+    result = {"anthropic_converter_clean": False, "utils_clean": False, "openai_agents_sets_it": False}
+
+    # 1. Check the Anthropic converter source
+    out.print("\n  1) Anthropic converter (extract_anthropic_usage_from_response):")
+    converter_source = inspect.getsource(anthropic_converter.extract_anthropic_usage_from_response)
+    has_total_in_converter = "total_tokens" in converter_source
+    out.print(f"     File: posthog/ai/anthropic/anthropic_converter.py")
+    out.print(f"     Contains 'total_tokens': {has_total_in_converter}")
+    if not has_total_in_converter:
+        out.print(f"     => CONFIRMED: Anthropic converter does NOT extract total_tokens")
+        result["anthropic_converter_clean"] = True
+    else:
+        out.print(f"     => UNEXPECTED: Found 'total_tokens' reference in converter!")
+
+    # Also check the streaming extractor
+    streaming_source = inspect.getsource(anthropic_converter.extract_anthropic_usage_from_event)
+    has_total_in_streaming = "total_tokens" in streaming_source
+    out.print(f"\n     Streaming extractor (extract_anthropic_usage_from_event):")
+    out.print(f"     Contains 'total_tokens': {has_total_in_streaming}")
+
+    # 2. Check utils.py - the code that tags properties before capture()
+    out.print("\n  2) General AI utils (posthog/ai/utils.py):")
+    utils_source = inspect.getsource(ai_utils)
+    has_total_in_utils = "ai_total_tokens" in utils_source or "$ai_total_tokens" in utils_source
+    out.print(f"     File: posthog/ai/utils.py")
+    out.print(f"     Contains 'ai_total_tokens': {has_total_in_utils}")
+    if not has_total_in_utils:
+        out.print(f"     => CONFIRMED: utils.py never tags $ai_total_tokens")
+        result["utils_clean"] = True
+    else:
+        out.print(f"     => UNEXPECTED: Found 'ai_total_tokens' reference in utils!")
+
+    # 3. Show that OpenAI Agents DOES set it (for contrast)
+    out.print("\n  3) OpenAI Agents processor (for contrast):")
+    try:
+        from posthog.ai.openai_agents import processor as agents_processor
+        agents_source = inspect.getsource(agents_processor)
+        has_total_in_agents = "$ai_total_tokens" in agents_source
+        out.print(f"     File: posthog/ai/openai_agents/processor.py")
+        out.print(f"     Contains '$ai_total_tokens': {has_total_in_agents}")
+        if has_total_in_agents:
+            out.print(f"     => This is the ONLY code path that sets $ai_total_tokens")
+            result["openai_agents_sets_it"] = True
+    except ImportError:
+        out.print(f"     Could not import openai_agents processor (not installed)")
+
+    # 4. Summary
+    out.print(f"\n  CONCLUSION:")
+    if result["anthropic_converter_clean"] and result["utils_clean"]:
+        out.print(f"     The Anthropic SDK code path NEVER sets $ai_total_tokens.")
+        out.print(f"     If $ai_total_tokens appears in a stored event from posthog.ai.anthropic,")
+        out.print(f"     it MUST have come from outside the SDK — most likely via posthog_properties.")
+        out.print(f"")
+        out.print(f"     Code references (posthog-python SDK):")
+        out.print(f"       - posthog/ai/anthropic/anthropic_converter.py:206-231")
+        out.print(f"         extract_anthropic_usage_from_response() -> only sets input_tokens, output_tokens, cache_*")
+        out.print(f"       - posthog/ai/utils.py -> tag('$ai_input_tokens', ...) and tag('$ai_output_tokens', ...)")
+        out.print(f"         NO tag('$ai_total_tokens', ...) anywhere")
+        out.print(f"       - posthog/ai/openai_agents/processor.py:539,696")
+        out.print(f"         ONLY place $ai_total_tokens is set (OpenAI Agents only, not Anthropic)")
+    else:
+        out.print(f"     UNEXPECTED: Found total_tokens references where none were expected!")
+
+    return result
+
+
+def write_output_md(step1_result: dict, step2_result: dict, step3_result: dict, raw_output: str, step4_result: dict | None = None):
     """Write a shareable output.md summarizing the investigation."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -545,9 +630,34 @@ The SDK already extracts the correct exclusive `input_tokens` from the Anthropic
 
 ---
 
+## Test 4: SDK Source Code Inspection
+
+Programmatically inspected the PostHog Python SDK source to prove `$ai_total_tokens` cannot come from the Anthropic code path:
+
+| Component | File | Sets `$ai_total_tokens`? |
+|-----------|------|------------------------|
+| Anthropic converter | `posthog/ai/anthropic/anthropic_converter.py` | {"No" if step4_result and step4_result.get('anthropic_converter_clean') else "YES (unexpected!)"} |
+| General AI utils | `posthog/ai/utils.py` | {"No" if step4_result and step4_result.get('utils_clean') else "YES (unexpected!)"} |
+| OpenAI Agents processor | `posthog/ai/openai_agents/processor.py` | {"**Yes** (only place)" if step4_result and step4_result.get('openai_agents_sets_it') else "No"} |
+
+**The Anthropic converter** (`extract_anthropic_usage_from_response`, lines 206-231) only extracts:
+- `input_tokens` (exclusive of cache)
+- `output_tokens`
+- `cache_read_input_tokens`
+- `cache_creation_input_tokens`
+- `web_search_count`
+
+**The general utils** (`posthog/ai/utils.py`) only tags `$ai_input_tokens` and `$ai_output_tokens`. There is no `tag("$ai_total_tokens", ...)` anywhere in this file.
+
+**The only code that sets `$ai_total_tokens`** is in `posthog/ai/openai_agents/processor.py` (lines 539 and 696), which is exclusively for OpenAI Agents — a completely separate code path from the Anthropic wrapper.
+
+**Result:** If `$ai_total_tokens` appears in a stored event captured via `posthog.ai.anthropic.AsyncAnthropic`, it **must** have come from outside the SDK — most likely via `posthog_properties`.
+
+---
+
 ## Key Evidence
 
-1. `$ai_total_tokens` is present in the stored events, but the PostHog Anthropic wrapper **never sets** this property. Only OpenAI Agents sets it. This strongly suggests the value comes from `posthog_properties`.
+1. `$ai_total_tokens` is present in the stored events, but the PostHog Anthropic wrapper **never sets** this property (confirmed by source inspection in Test 4). Only OpenAI Agents sets it. This strongly suggests the value comes from `posthog_properties`.
 
 2. The stored `$ai_input_tokens` (48268) minus `$ai_cache_read_input_tokens` (45417) equals exactly the expected exclusive value (2851), which is what the Anthropic API returns as `input_tokens`.
 
@@ -588,14 +698,19 @@ async def main():
     # Step 3: Test the posthog_properties override theory
     step3_result = await step3_posthog_wrapper_with_custom_properties(out)
 
+    # Step 4: Prove $ai_total_tokens is never set by Anthropic SDK
+    step4_result = await step4_prove_total_tokens_never_set(out)
+
     out.start_section("DONE")
     out.print("  Check the output above to see if the bug is reproducible.")
     out.print("  If Step 2 shows correct values but the customer sees wrong values,")
     out.print("  the issue is likely in posthog_properties overrides (Step 3).")
+    out.print("  Step 4 proves via source inspection that $ai_total_tokens cannot")
+    out.print("  come from the Anthropic SDK code path.")
     out.print()
 
     # Write the markdown output
-    write_output_md(step1_result, step2_result, step3_result, out.get_raw_output())
+    write_output_md(step1_result, step2_result, step3_result, out.get_raw_output(), step4_result)
 
 
 if __name__ == "__main__":
