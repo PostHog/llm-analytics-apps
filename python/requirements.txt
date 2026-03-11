@@ -14,6 +14,7 @@ google-genai
 # LangChain
 langchain
 langchain-core
+langchain-anthropic
 langchain-openai
 
 # OpenAI (also needed for LangChain)
@@ -33,3 +34,4 @@ opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
 opentelemetry-instrumentation-openai
+opentelemetry-instrumentation-langchain
