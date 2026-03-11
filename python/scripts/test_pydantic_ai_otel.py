@@ -44,7 +44,7 @@ def setup_otel() -> TracerProvider:
         print("ERROR: POSTHOG_API_KEY must be set in .env")
         sys.exit(1)
 
-    os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = f"{posthog_host}/i/v0/llma_otel"
+    os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = f"{posthog_host}/i/v0/ai/otel"
     os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Bearer {posthog_api_key}"
 
     resource_attrs: dict[str, str] = {

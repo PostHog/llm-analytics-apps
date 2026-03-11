@@ -40,7 +40,7 @@ class PydanticAIOtelProvider(BaseProvider):
 
         # Configure OTLP exporter via env vars (following Pydantic AI docs pattern)
         # Use TRACES_ENDPOINT to avoid automatic /v1/traces suffix
-        os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = f"{posthog_host}/i/v0/llma_otel"
+        os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = f"{posthog_host}/i/v0/ai/otel"
         os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Bearer {posthog_api_key}"
 
         exporter = OTLPSpanExporter()
