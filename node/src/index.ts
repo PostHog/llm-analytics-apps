@@ -32,6 +32,7 @@ import { VercelAIGatewayAnthropicStreamingProvider } from './providers/vercel-ai
 import { VercelAIOtelOpenAIProvider } from './providers/vercel-ai-otel-openai.js';
 import { VercelAIOtelOpenAIEmbeddingsProvider } from './providers/vercel-ai-otel-openai-embeddings.js';
 import { VercelAIOtelGeminiImageProvider } from './providers/vercel-ai-otel-gemini-image.js';
+import { VercelAIOtelProvider } from './providers/vercel-ai-otel.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -163,7 +164,8 @@ function displayProviders(mode?: string): Map<string, string> {
     ['23', 'Vercel AI Gateway Streaming (Anthropic)'],
     ['24', 'Vercel AI SDK OTEL (OpenAI)'],
     ['25', 'Vercel AI SDK OTEL (OpenAI + Embeddings)'],
-    ['26', 'Vercel AI SDK OTEL (Gemini + Image Gen)']
+    ['26', 'Vercel AI SDK OTEL (Gemini + Image Gen)'],
+    ['27', 'Vercel AI SDK (Raw OTel)']
   ]);
 
   // Filter providers for embeddings mode
@@ -220,7 +222,7 @@ function displayProviders(mode?: string): Map<string, string> {
 async function getProviderChoice(allowModeChange: boolean = false, allowAll: boolean = false): Promise<string> {
   return new Promise((resolve) => {
     const askForChoice = () => {
-      let prompt = '\nSelect a provider (1-26)';
+      let prompt = '\nSelect a provider (1-27)';
       if (allowAll) {
         prompt += ', \'a\' for all providers';
       }
@@ -231,7 +233,7 @@ async function getProviderChoice(allowModeChange: boolean = false, allowAll: boo
 
       rl.question(prompt, (choice) => {
         choice = choice.trim().toLowerCase();
-        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26'].includes(choice)) {
+        if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27'].includes(choice)) {
           clearScreen();
           resolve(choice);
         } else if (allowAll && choice === 'a') {
@@ -336,6 +338,8 @@ function createProvider(choice: string, enableThinking: boolean = false, thinkin
       return new VercelAIOtelOpenAIEmbeddingsProvider(posthog, aiSessionId);
     case '26':
       return new VercelAIOtelGeminiImageProvider(posthog, aiSessionId);
+    case '27':
+      return new VercelAIOtelProvider(posthog, aiSessionId);
     default:
       throw new Error('Invalid provider choice');
   }
