@@ -7,7 +7,9 @@ set -euo pipefail
 # Usage:
 #   ./run-examples.sh                           Interactive menu
 #   ./run-examples.sh --list                    List all examples
-#   ./run-examples.sh --all                     Run all examples
+#   ./run-examples.sh --all                     Run all examples sequentially
+#   ./run-examples.sh --parallel                Run all examples in parallel (mprocs)
+#   ./run-examples.sh --parallel anthropic      Run matching examples in parallel
 #   ./run-examples.sh --install                 Install deps for all examples
 #   ./run-examples.sh openai/embeddings         Run a specific example (fuzzy match)
 #   ./run-examples.sh anthropic                 Run all examples matching "anthropic"
@@ -146,6 +148,21 @@ run_example() {
     fi
 }
 
+# Build the shell command string for a single example (used by mprocs)
+example_cmd() {
+    local idx="$1"
+    local file="${FILES[$idx]}"
+    local lang="${LANGS[$idx]}"
+    local dir
+    dir=$(dirname "$file")
+
+    if [[ "$lang" == "py" ]]; then
+        echo "$PYTHON $file"
+    else
+        echo "cd $dir && npx tsx $(basename "$file")"
+    fi
+}
+
 # Find examples matching a pattern. Returns matching indices in MATCHED array.
 find_matches() {
     local pattern="$1"
@@ -155,6 +172,38 @@ find_matches() {
             MATCHED+=("$i")
         fi
     done
+}
+
+# ---------------------------------------------------------------------------
+# Parallel execution with mprocs
+# ---------------------------------------------------------------------------
+
+run_parallel() {
+    local indices=("$@")
+
+    if ! command -v mprocs &>/dev/null; then
+        echo "mprocs is not installed. Install it with: brew install mprocs"
+        exit 1
+    fi
+
+    # Build mprocs config
+    local config
+    config=$(mktemp /tmp/mprocs-examples-XXXXXX.yaml)
+    trap "rm -f $config" EXIT
+
+    echo "procs:" > "$config"
+    for i in "${indices[@]}"; do
+        local name="${NAMES[$i]}"
+        local cmd
+        cmd=$(example_cmd "$i")
+        # Wrap in env-loading shell so each proc has the API keys
+        local full_cmd="set -a; source $SCRIPT_DIR/.env 2>/dev/null; set +a; $cmd"
+        echo "  \"$name\":" >> "$config"
+        echo "    shell: \"$full_cmd\"" >> "$config"
+    done
+
+    echo "Running ${#indices[@]} examples in parallel..."
+    mprocs --config "$config"
 }
 
 # ---------------------------------------------------------------------------
@@ -183,15 +232,33 @@ fi
 
 MODE="${1:-}"
 
-if [[ "$MODE" == "--all" ]]; then
+if [[ "$MODE" == "--parallel" ]]; then
+    FILTER="${2:-}"
+    if [[ -n "$FILTER" ]]; then
+        find_matches "$FILTER"
+        if [[ ${#MATCHED[@]} -eq 0 ]]; then
+            echo "No examples matching '$FILTER'."
+            exit 1
+        fi
+        run_parallel "${MATCHED[@]}"
+    else
+        # All examples
+        ALL_INDICES=()
+        for i in "${!NAMES[@]}"; do
+            ALL_INDICES+=("$i")
+        done
+        run_parallel "${ALL_INDICES[@]}"
+    fi
+
+elif [[ "$MODE" == "--all" ]]; then
     echo "Running all ${#NAMES[@]} examples..."
     FAILED=0
     PASSED=0
     for i in "${!NAMES[@]}"; do
         if run_example "$i"; then
-            (( PASSED++ ))
+            (( PASSED++ )) || true
         else
-            (( FAILED++ ))
+            (( FAILED++ )) || true
             echo "FAILED: ${NAMES[$i]}"
         fi
     done

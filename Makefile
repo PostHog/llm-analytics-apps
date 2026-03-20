@@ -1,4 +1,4 @@
-.PHONY: examples examples-list examples-all examples-python examples-node run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+.PHONY: examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
 
 ## Run the interactive example picker (sources .env, discovers examples from sibling SDK repos)
 examples:
@@ -12,17 +12,13 @@ examples-list:
 examples-all:
 	@./run-examples.sh --all
 
-## Run only Python examples
-examples-python:
-	@./run-examples.sh --filter "[python]"
+## Run all examples in parallel via mprocs (or filtered: make examples-parallel F=anthropic)
+examples-parallel:
+	@./run-examples.sh --parallel $(F)
 
-## Run only Node.js examples
-examples-node:
-	@./run-examples.sh --filter "[node]"
-
-## Run examples matching a pattern (e.g., make examples-filter F=anthropic)
-examples-filter:
-	@./run-examples.sh --filter "$(F)"
+## Install dependencies for all examples
+examples-install:
+	@./run-examples.sh --install
 
 ## Run the trace generator (mock trace data, no LLM calls)
 run-trace-generator:
