@@ -1,0 +1,25 @@
+[project]
+name = "llm-analytics-apps"
+version = "0.1.0"
+description = "Internal tooling for the PostHog LLM Analytics team"
+requires-python = ">=3.10"
+
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "posthog>=6.6.1",
+    "anthropic>=0.18.0",
+    "google-genai",
+    "langchain",
+    "langchain-core",
+    "langchain-anthropic",
+    "langchain-openai",
+    "openai",
+    "openai-agents",
+    "litellm",
+    "pydantic-ai",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-http",
+    "opentelemetry-instrumentation-openai",
+    "opentelemetry-instrumentation-langchain",
+]

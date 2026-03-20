@@ -1,4 +1,9 @@
-.PHONY: examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+.PHONY: setup examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+
+## Install all dependencies
+setup:
+	@uv sync
+	@pnpm install
 
 ## Run the interactive example picker (sources .env, discovers examples from sibling SDK repos)
 examples:
@@ -22,23 +27,23 @@ examples-install:
 
 ## Run the trace generator (mock trace data, no LLM calls)
 run-trace-generator:
-	@cd python/trace-generator && ./run.sh
+	@uv run trace-generator/trace_generator.py
 
 run-trace-generator-debug:
-	@cd python/trace-generator && DEBUG=1 ./run.sh
+	@DEBUG=1 uv run trace-generator/trace_generator.py
 
 ## Generate demo data (5 conversations, random providers, 5 turns each)
 demo-data:
-	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 5 --max-turns 5 --parallel 3
+	@uv run scripts/generate_demo_data.py --conversations 5 --max-turns 5 --parallel 3
 
 ## Quick demo data (3 short conversations)
 demo-data-quick:
-	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 3 --max-turns 3 --parallel 3 --providers openai_chat
+	@uv run scripts/generate_demo_data.py --conversations 3 --max-turns 3 --parallel 3 --providers openai_chat
 
 ## Generate tool-heavy demo conversations (weather lookups, jokes across multiple cities)
 demo-data-tools:
-	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --tools --conversations 5 --max-turns 6 --parallel 3
+	@uv run scripts/generate_demo_data.py --tools --conversations 5 --max-turns 6 --parallel 3
 
 ## Generate negative/angry demo conversations for sentiment testing
 demo-data-negative:
-	@cd python && source venv/bin/activate && python scripts/generate_demo_data.py --conversations 3 --max-turns 4 --parallel 3 --providers openai_chat --persona "an extremely frustrated customer who has been passed around to 5 different support agents" --topic "complaining about a product that keeps breaking"
+	@uv run scripts/generate_demo_data.py --conversations 3 --max-turns 4 --parallel 3 --providers openai_chat --persona "an extremely frustrated customer who has been passed around to 5 different support agents" --topic "complaining about a product that keeps breaking"

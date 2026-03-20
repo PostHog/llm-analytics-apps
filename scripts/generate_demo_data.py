@@ -1950,7 +1950,7 @@ Available providers:
         return
 
     # Load environment variables
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
     # Validate environment
     if not os.getenv("POSTHOG_API_KEY"):

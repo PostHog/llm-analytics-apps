@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env npx tsx
 /**
  * Test script for PostHog LLM analytics with Vercel AI SDK + Anthropic.
  * Demonstrates the withTracing integration pattern.
@@ -24,7 +24,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from llm-analytics-apps/.env
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 async function main() {
   console.log('🚀 Testing PostHog LLM Analytics - Vercel AI + Anthropic\n');

@@ -31,7 +31,7 @@ from posthog.ai.anthropic import Anthropic
 from posthog.ai.openai import OpenAI
 
 # Load environment variables from parent directory
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 
 class ScreenshotDemo:
