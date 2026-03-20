@@ -7,14 +7,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Internal tooling for the PostHog LLM Analytics team. Provider examples have been moved to the SDK repos (`posthog-python` and `posthog-js`) as `examples/example-ai-*` directories.
 
 What remains here:
-- **Demo data generator** (`python/scripts/generate_demo_data.py`) — generates realistic multi-turn conversations using PostHog AI SDKs
-- **Trace generator** (`python/trace-generator/`) — creates mock LLM trace data without real API calls
-- **Test scripts** (`python/scripts/`, `node/scripts/`) — integration tests for specific SDK features
+- **Demo data generator** (`scripts/generate_demo_data.py`) — generates realistic multi-turn conversations using PostHog AI SDKs
+- **Trace generator** (`trace-generator/`) — creates mock LLM trace data without real API calls
+- **Test scripts** (`scripts/test_*.py`) — integration tests for specific SDK features
 - **Example runner** (`run-examples.sh`) — discovers and runs examples from sibling SDK repos
+- **Screenshot demo** (`screenshot-demo/`) — UI screenshot tool
 
 ## Key Commands
 
 ```bash
+# Setup
+make setup                      # install deps via uv
+
 # Run SDK examples from sibling repos
 make examples-list              # list all available examples
 make examples-parallel          # run all in parallel via mprocs
@@ -27,33 +31,32 @@ make demo-data-quick            # 3 short, single provider
 # Trace generator (no LLM calls)
 make run-trace-generator
 
-# Setup
-cd python && ./run.sh           # python venv + deps
-cd node && ./run.sh             # node deps via pnpm
+# Run individual scripts
+uv run scripts/test_litellm.py
 ```
 
-## Architecture
+## Project Structure
 
-### Python (`python/`)
-- `run.sh` — sets up venv, installs deps from `requirements.txt`
-- `scripts/generate_demo_data.py` — multi-provider demo data using `posthog.ai` SDK wrappers
-- `scripts/test_*.py` — individual integration tests
-- `trace-generator/` — mock trace builder
-- `screenshot-demo/` — UI screenshot tool
+```
+├── pyproject.toml              # dependencies (managed by uv)
+├── Makefile                    # all common tasks
+├── run-examples.sh             # SDK example runner
+├── prepare.sh                  # local PostHog API key sync
+├── scripts/                    # demo data and test scripts
+│   ├── generate_demo_data.py   # multi-provider demo data
+│   └── test_*.py               # integration tests
+├── trace-generator/            # mock trace builder
+└── screenshot-demo/            # UI screenshot tool
+```
 
-### Node.js (`node/`)
-- `run.sh` — installs deps via pnpm, handles local SDK symlinks
-- `scripts/test_*.ts` — integration tests (Vercel AI, OTel)
-
-### Configuration
+## Configuration
 
 Environment variables in `.env`:
 - `POSTHOG_API_KEY`, `POSTHOG_HOST` — PostHog connection
 - `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` — provider keys
 - `POSTHOG_PYTHON_PATH`, `POSTHOG_JS_PATH` — local SDK paths for development
-- `POSTHOG_PYTHON_VERSION`, `POSTHOG_JS_AI_VERSION` — specific published versions
 
-### Trace Generator Event Types
+## Trace Generator Event Types
 
 The trace generator creates three event types:
 - `$ai_trace` — top-level trace events

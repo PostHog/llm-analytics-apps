@@ -6,26 +6,13 @@ For copy-paste-able provider integration examples, see the `examples/example-ai-
 
 ## Setup
 
+Requires [uv](https://docs.astral.sh/uv/).
+
 ```bash
 cp .env.example .env
 # Fill in your API keys in .env
+make setup
 ```
-
-### Python
-
-```bash
-cd python && ./run.sh
-```
-
-This sets up a virtual environment and installs all dependencies. Set `POSTHOG_PYTHON_PATH` in `.env` to use a local SDK checkout.
-
-### Node.js
-
-```bash
-cd node && ./run.sh
-```
-
-This installs dependencies via pnpm. Set `POSTHOG_JS_PATH` in `.env` to use a local SDK checkout.
 
 ## Tools
 
@@ -72,10 +59,9 @@ make run-trace-generator
 Various scripts for testing specific SDK integrations:
 
 ```bash
-cd python && source venv/bin/activate
-python scripts/test_litellm.py
-python scripts/test_langchain_otel.py
-python scripts/test_pydantic_ai_otel.py
+uv run scripts/test_litellm.py
+uv run scripts/test_langchain_otel.py
+uv run scripts/test_pydantic_ai_otel.py
 ```
 
 ## Local SDK Development
@@ -86,8 +72,6 @@ To develop against local SDK checkouts, set these in `.env`:
 POSTHOG_PYTHON_PATH=../../posthog-python
 POSTHOG_JS_PATH=../../posthog-js
 ```
-
-The setup scripts will automatically use editable/symlinked installs.
 
 ## License
 
