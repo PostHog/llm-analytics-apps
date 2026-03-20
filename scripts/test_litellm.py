@@ -17,7 +17,7 @@ from urllib.parse import urlparse, urlunparse
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dotenv import load_dotenv
-env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(env_path, override=True)
 
 # Set up PostHog env vars BEFORE importing litellm (which initializes PostHog integration)

@@ -1,8 +1,9 @@
 .PHONY: setup examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
 
-## Install dependencies via uv
+## Install all dependencies
 setup:
 	@uv sync
+	@pnpm install
 
 ## Run the interactive example picker (sources .env, discovers examples from sibling SDK repos)
 examples:

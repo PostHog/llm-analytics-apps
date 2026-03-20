@@ -8,8 +8,7 @@ Each run is tagged with a --batch-label so events from different migration state
 
 Usage:
     cd /path/to/llm-analytics-apps
-    source python/venv/bin/activate
-    python python/scripts/test_ai_events_migration.py --batch-label S1
+    uv run scripts/test_ai_events_migration.py --batch-label S1
 
 Environment:
     POSTHOG_HOST        PostHog instance URL (default: http://localhost:8010)

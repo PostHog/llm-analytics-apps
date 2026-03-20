@@ -22,3 +22,6 @@ __pycache__/
 
 # Misc
 example.json
+
+# Node.js
+node_modules/

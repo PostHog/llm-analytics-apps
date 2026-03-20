@@ -38,12 +38,14 @@ uv run scripts/test_litellm.py
 ## Project Structure
 
 ```
-├── pyproject.toml              # dependencies (managed by uv)
+├── pyproject.toml              # Python dependencies (managed by uv)
+├── package.json                # Node dependencies (managed by pnpm)
 ├── Makefile                    # all common tasks
 ├── run-examples.sh             # SDK example runner
 ├── scripts/                    # demo data and test scripts
 │   ├── generate_demo_data.py   # multi-provider demo data
-│   └── test_*.py               # integration tests
+│   ├── test_*.py               # Python integration tests
+│   └── test_*.ts               # Node integration tests (Vercel AI, OTel)
 ├── trace-generator/            # mock trace builder
 └── screenshot-demo/            # UI screenshot tool
 ```

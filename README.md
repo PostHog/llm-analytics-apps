@@ -6,7 +6,7 @@ For copy-paste-able provider integration examples, see the `examples/example-ai-
 
 ## Setup
 
-Requires [uv](https://docs.astral.sh/uv/).
+Requires [uv](https://docs.astral.sh/uv/) and [pnpm](https://pnpm.io/).
 
 ```bash
 cp .env.example .env
@@ -59,9 +59,14 @@ make run-trace-generator
 Various scripts for testing specific SDK integrations:
 
 ```bash
+# Python
 uv run scripts/test_litellm.py
 uv run scripts/test_langchain_otel.py
 uv run scripts/test_pydantic_ai_otel.py
+
+# Node (Vercel AI SDK)
+npx tsx scripts/test_vercel_ai_otel.ts
+npx tsx scripts/test_vercel_anthropic.ts
 ```
 
 ## Local SDK Development
