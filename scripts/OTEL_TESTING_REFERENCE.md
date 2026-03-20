@@ -518,17 +518,17 @@ in middleware.
 ## How to run (Pydantic AI example)
 
 ```bash
-cd llm-analytics-apps/python
-pip install -r requirements.txt
+cd llm-analytics-apps
+uv sync
 
 # All scenarios
-python scripts/test_pydantic_ai_otel.py
+uv run scripts/test_pydantic_ai_otel.py
 
 # Specific scenarios
-python scripts/test_pydantic_ai_otel.py 2 5
+uv run scripts/test_pydantic_ai_otel.py 2 5
 
 # With debug mode (captures raw pre-mapping properties)
-DEBUG=1 python scripts/test_pydantic_ai_otel.py
+DEBUG=1 uv run scripts/test_pydantic_ai_otel.py
 ```
 
 After running, wait ~30s for ingestion, then open PostHog → LLM analytics → Traces.

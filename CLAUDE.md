@@ -41,7 +41,6 @@ uv run scripts/test_litellm.py
 ├── pyproject.toml              # dependencies (managed by uv)
 ├── Makefile                    # all common tasks
 ├── run-examples.sh             # SDK example runner
-├── prepare.sh                  # local PostHog API key sync
 ├── scripts/                    # demo data and test scripts
 │   ├── generate_demo_data.py   # multi-provider demo data
 │   └── test_*.py               # integration tests
