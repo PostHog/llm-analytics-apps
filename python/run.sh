@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Unified AI Chatbot Runner
-# This script sets up the virtual environment, installs dependencies, and runs the chatbot
+# Python environment setup
+# Sets up the virtual environment and installs dependencies
 
 set -e  # Exit on any error
 
@@ -29,7 +29,7 @@ if [ -f "../prepare.sh" ]; then
     . ../prepare.sh
 fi
 
-echo -e "${BLUE}🚀 Unified AI Chatbot Setup${NC}"
+echo -e "${BLUE}🚀 Python Environment Setup${NC}"
 echo "=================================="
 
 # Check if Python 3 is available
@@ -106,23 +106,4 @@ fi
 
 echo -e "${GREEN}✅ Setup complete!${NC}"
 echo ""
-
-# If only installing, stop here
-if [ "${INSTALL_ONLY}" = "1" ]; then
-    echo -e "${BLUE}ℹ️  INSTALL_ONLY=1 set; skipping app run.${NC}"
-    deactivate
-    exit 0
-fi
-
-
-# Clear terminal only after successful setup
-clear
-
-echo -e "${BLUE}🤖 Starting Unified AI Chatbot...${NC}"
-echo ""
-
-# Run the main application
-python main.py
-
-# Deactivate virtual environment when done
-deactivate
+echo -e "${BLUE}ℹ️  Virtual environment is ready. Activate with: source venv/bin/activate${NC}"

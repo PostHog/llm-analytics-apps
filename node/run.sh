@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Unified AI Chatbot Runner
-# This script sets up the node environment, installs dependencies, and runs the chatbot
+# Node.js environment setup
+# Sets up dependencies and handles local SDK symlinking
 
 set -e  # Exit on any error
 
@@ -30,7 +30,7 @@ if [ -f "../prepare.sh" ]; then
     . ../prepare.sh
 fi
 
-echo -e "${BLUE}🚀 Unified AI Chatbot Setup${NC}"
+echo -e "${BLUE}🚀 Node.js Environment Setup${NC}"
 echo "=================================="
 
 # Check if Node.js is available
@@ -172,18 +172,6 @@ else
     fi
 fi
 
-# Build TypeScript files
-echo -e "${YELLOW}🔨 Building TypeScript files...${NC}"
-pnpm run build
-
 echo -e "${GREEN}✅ Setup complete!${NC}"
 echo ""
-
-# Clear terminal only after successful setup
-clear
-
-echo -e "${BLUE}🤖 Starting Unified AI Chatbot...${NC}"
-echo ""
-
-# Run the main application
-node dist/index.js
+echo -e "${BLUE}ℹ️  Dependencies are installed. Run scripts from node/scripts/.${NC}"

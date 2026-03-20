@@ -1,133 +1,94 @@
 # LLM Analytics Apps
 
-Example implementations of various LLM providers using PostHog's AI SDKs. This repository demonstrates how to integrate multiple AI providers (Anthropic, OpenAI, Google Gemini) with PostHog for analytics tracking.
+Internal tooling for the PostHog LLM Analytics team. Contains demo data generators, trace generators, test scripts, and a runner for the SDK examples that live in [posthog-python](https://github.com/PostHog/posthog-python) and [posthog-js](https://github.com/PostHog/posthog-js).
 
-## 🔧 Prerequisites
+For copy-paste-able provider integration examples, see the `examples/example-ai-*` directories in each SDK repo.
 
-### For Python:
-- Python 3.8 or higher
-- pip package manager
-
-### For Node.js:
-- Node.js 24 or higher
-- npm package manager
-
-## ⚙️ Setup
-
-1. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and add your API keys:
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
-   - `GEMINI_API_KEY`: Your Google Gemini API key
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `POSTHOG_API_KEY`: Your PostHog API key
-   - `POSTHOG_HOST`: PostHog host (defaults to https://app.posthog.com)
-
-2. **Run the application:**
-
-   For Python:
-   ```bash
-   cd python
-   ./run.sh
-   ```
-
-   For Node.js:
-   ```bash
-   cd node
-   ./run.sh
-   ```
-
-The `run.sh` script will automatically:
-- Set up a virtual environment (Python) or install dependencies (Node)
-- Install all required packages
-- Start the interactive CLI
-
-## 🎮 Usage
-
-### Test Modes
-- **Chat Mode**: Interactive conversation with the selected provider
-- **Tool Call Test**: Automatically tests weather tool calling
-- **Message Test**: Simple greeting test
-- **Image Test**: Tests image description capabilities
-- **Embeddings Test**: Tests embedding generation (OpenAI only)
-
-### 🧠 Extended Thinking (Anthropic Claude)
-
-Claude's extended thinking feature allows the model to show its internal reasoning process before responding. This can improve response quality for complex problems.
-
-**How to use:**
-
-When you select an Anthropic provider (options 1 or 2), you'll be prompted:
-
-```
-🧠 Extended Thinking Configuration
-==================================================
-Extended thinking shows Claude's reasoning process.
-This can improve response quality for complex problems.
-==================================================
-
-Enable extended thinking? (y/n) [default: n]: y
-Thinking budget tokens (1024-32000) [default: 10000]: 15000
-
-✅ Initialized Anthropic (Thinking: enabled, budget: 15000)
-```
-
-**How it works:**
-- The CLI will ask if you want to enable thinking each time you select an Anthropic provider
-- You can customize the thinking budget (min: 1024, recommended: 10000-15000)
-- Claude will show its reasoning process prefixed with "💭 Thinking:"
-- Larger budgets can improve response quality for complex problems
-- The model may not use the entire allocated budget
-- Works with both regular and streaming Anthropic providers
-- `max_tokens` is automatically adjusted to accommodate both thinking and response
-
-**Example output:**
-```
-👤 You: Are there an infinite number of prime numbers such that n mod 4 == 3?
-
-💭 Thinking: Let me think about this systematically. I need to consider 
-the distribution of primes and their properties modulo 4...
-
-🤖 Bot: Yes, there are infinitely many prime numbers of the form 4k + 3...
-```
-
-### 🎯 LLM Trace Generator
-An interactive tool for creating complex nested LLM trace data for testing PostHog analytics. Features pre-built templates (simple chat, RAG pipeline, multi-agent) and a custom trace builder for creating arbitrarily complex structures.
+## Setup
 
 ```bash
-cd python/trace-generator
-./run.sh
+cp .env.example .env
+# Fill in your API keys in .env
 ```
 
-## 🛠️ Development
+### Python
 
-### Local Development with PostHog SDKs
+```bash
+cd python && ./run.sh
+```
 
-If you're developing the PostHog SDKs locally, you can use local paths instead of published packages:
+This sets up a virtual environment and installs all dependencies. Set `POSTHOG_PYTHON_PATH` in `.env` to use a local SDK checkout.
 
-1. Set environment variables in your `.env`:
-   ```bash
-   # For local PostHog SDK development
-   POSTHOG_PYTHON_PATH=/../posthog-python
-   POSTHOG_JS_PATH=/../posthog-js
-   ```
+### Node.js
 
-2. Run the application normally with `./run.sh`
+```bash
+cd node && ./run.sh
+```
 
-The scripts will automatically detect and use your local SDK versions.
+This installs dependencies via pnpm. Set `POSTHOG_JS_PATH` in `.env` to use a local SDK checkout.
 
-## 📝 License
+## Tools
 
-MIT License - see LICENSE file for details
+### SDK Example Runner
 
-## 🤝 Contributing
+Discovers and runs all `example-ai-*` examples from sibling `posthog-python` and `posthog-js` repos.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+# List all available examples
+make examples-list
 
-## 🔗 Links
+# Run a specific example or group by name
+./run-examples.sh anthropic        # all anthropic examples
+./run-examples.sh python/openai    # python openai examples only
 
-- [PostHog Documentation](https://posthog.com/docs)
-- [PostHog Python SDK](https://github.com/PostHog/posthog-python)
-- [PostHog JavaScript SDK](https://github.com/PostHog/posthog-js)
+# Run all examples in parallel via mprocs
+make examples-parallel
+
+# Install dependencies for all examples
+make examples-install
+```
+
+### Demo Data Generator
+
+Generates realistic multi-turn conversations across all supported providers using the PostHog AI SDKs directly. Useful for populating a PostHog instance with representative LLM analytics data.
+
+```bash
+make demo-data                # 5 conversations, random providers
+make demo-data-quick          # 3 short conversations, single provider
+make demo-data-tools          # tool-heavy conversations
+make demo-data-negative       # negative sentiment for testing
+```
+
+### Trace Generator
+
+Creates complex nested LLM trace data (traces, spans, generations) without making real LLM calls. Useful for testing PostHog's trace visualization.
+
+```bash
+make run-trace-generator
+```
+
+### Test Scripts
+
+Various scripts for testing specific SDK integrations:
+
+```bash
+cd python && source venv/bin/activate
+python scripts/test_litellm.py
+python scripts/test_langchain_otel.py
+python scripts/test_pydantic_ai_otel.py
+```
+
+## Local SDK Development
+
+To develop against local SDK checkouts, set these in `.env`:
+
+```bash
+POSTHOG_PYTHON_PATH=../../posthog-python
+POSTHOG_JS_PATH=../../posthog-js
+```
+
+The setup scripts will automatically use editable/symlinked installs.
+
+## License
+
+MIT License - see LICENSE file for details.

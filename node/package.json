@@ -1,24 +1,13 @@
 {
   "name": "node-unified",
   "version": "1.0.0",
-  "description": "Unified AI Chatbot - Supports multiple LLM providers: Anthropic, Gemini, LangChain, and OpenAI",
+  "description": "LLM Analytics internal tooling - test scripts and demo data for PostHog AI SDK integrations",
   "type": "module",
-  "main": "dist/index.js",
   "packageManager": "pnpm@10.23.0",
   "scripts": {
     "build": "tsc",
-    "start": "pnpm build && node dist/index.js",
-    "dev": "ts-node src/index.ts",
     "clean": "rm -rf dist"
   },
-  "keywords": [
-    "typescript",
-    "node",
-    "cli",
-    "chatbot",
-    "ai",
-    "llm"
-  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
