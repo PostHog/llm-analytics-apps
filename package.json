@@ -4,19 +4,19 @@
   "type": "module",
   "packageManager": "pnpm@10.23.0",
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.18",
-    "@ai-sdk/openai": "^3.0.14",
+    "@ai-sdk/anthropic": "^3.0.58",
+    "@ai-sdk/openai": "^3.0.41",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.212.0",
-    "@opentelemetry/resources": "^2.0.0",
-    "@opentelemetry/sdk-node": "^0.212.0",
-    "@posthog/ai": "^7.5.3",
-    "ai": "^6.0.45",
-    "dotenv": "^16.6.1",
-    "posthog-node": "^5.24.1",
-    "zod": "^3.25.76"
+    "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
+    "@opentelemetry/resources": "^2.6.0",
+    "@opentelemetry/sdk-node": "^0.213.0",
+    "@posthog/ai": "^7.12.1",
+    "ai": "^6.0.116",
+    "dotenv": "^17.3.1",
+    "posthog-node": "^5.28.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "tsx": "^4.19.0"
+    "tsx": "^4.21.0"
   }
 }
