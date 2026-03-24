@@ -15,7 +15,7 @@ dependencies = [
     "langchain-openai",
     "openai",
     "openai-agents",
-    "litellm",
+    "litellm==1.81.13",
     "pydantic-ai",
     "opentelemetry-api",
     "opentelemetry-sdk",
