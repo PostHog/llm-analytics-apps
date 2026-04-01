@@ -94,13 +94,7 @@ async def run_query(prompt: str, posthog_client, distinct_id: str, extra_props: 
 async def run_interactive(posthog_client, distinct_id: str):
     from claude_agent_sdk import ClaudeAgentOptions, AssistantMessage, ResultMessage
     from claude_agent_sdk.types import TextBlock, ToolUseBlock
-    from posthog.ai.claude_agent_sdk import instrument
-
-    ph = instrument(
-        client=posthog_client,
-        distinct_id=distinct_id,
-        properties={"app": "llm-analytics-apps", "mode": "interactive"},
-    )
+    from posthog.ai.claude_agent_sdk import PostHogClaudeSDKClient
 
     options = ClaudeAgentOptions(
         max_turns=10,
@@ -108,32 +102,39 @@ async def run_interactive(posthog_client, distinct_id: str):
         permission_mode="bypassPermissions",
     )
 
-    print("\nClaude Agent SDK — Interactive Mode")
+    print("\nClaude Agent SDK — Interactive Mode (stateful, multi-turn)")
     print("Type 'quit' to exit\n")
 
-    while True:
-        try:
-            prompt = input("> ").strip()
-            if not prompt:
-                continue
-            if prompt.lower() in ("quit", "exit", "q"):
+    async with PostHogClaudeSDKClient(
+        options,
+        posthog_client=posthog_client,
+        posthog_distinct_id=distinct_id,
+        posthog_properties={"app": "llm-analytics-apps", "mode": "interactive"},
+    ) as client:
+        while True:
+            try:
+                prompt = input("> ").strip()
+                if not prompt:
+                    continue
+                if prompt.lower() in ("quit", "exit", "q"):
+                    break
+
+                await client.query(prompt)
+                async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                print(f"  {block.text[:500]}")
+                            elif isinstance(block, ToolUseBlock):
+                                print(f"  [tool] {block.name}")
+                    elif isinstance(message, ResultMessage):
+                        print(f"  [{message.num_turns} turns, ${message.total_cost_usd:.4f}]")
+                print()
+
+            except KeyboardInterrupt:
                 break
-
-            async for message in ph.query(prompt=prompt, options=options):
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            print(f"  {block.text[:500]}")
-                        elif isinstance(block, ToolUseBlock):
-                            print(f"  [tool] {block.name}")
-                elif isinstance(message, ResultMessage):
-                    print(f"  [{message.num_turns} turns, ${message.total_cost_usd:.4f}]")
-            print()
-
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            print(f"  [error] {e}")
+            except Exception as e:
+                print(f"  [error] {e}")
 
 
 def main():
