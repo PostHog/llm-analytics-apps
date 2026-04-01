@@ -24,3 +24,6 @@ dependencies = [
     "opentelemetry-instrumentation-openai",
     "opentelemetry-instrumentation-langchain",
 ]
+
+[tool.uv]
+exclude-newer = "7 days"
