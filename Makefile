@@ -1,4 +1,4 @@
-.PHONY: setup examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+.PHONY: setup examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative install-local-sdk test-claude-agent-sdk test-claude-agent-sdk-interactive
 
 ## Install all dependencies
 setup:
@@ -47,3 +47,17 @@ demo-data-tools:
 ## Generate negative/angry demo conversations for sentiment testing
 demo-data-negative:
 	@uv run scripts/generate_demo_data.py --conversations 3 --max-turns 4 --parallel 3 --providers openai_chat --persona "an extremely frustrated customer who has been passed around to 5 different support agents" --topic "complaining about a product that keeps breaking"
+
+## Install local posthog-python for development (required for claude-agent-sdk integration)
+install-local-sdk:
+	@uv sync
+	@uv pip install -e ../posthog-python
+	@echo "Local posthog-python installed. Use 'make test-claude-agent-sdk' to run."
+
+## Claude Agent SDK test (requires local posthog-python with integration)
+test-claude-agent-sdk:
+	@uv run --no-sync scripts/test_claude_agent_sdk.py
+
+## Claude Agent SDK interactive mode
+test-claude-agent-sdk-interactive:
+	@uv run --no-sync scripts/test_claude_agent_sdk.py --interactive
