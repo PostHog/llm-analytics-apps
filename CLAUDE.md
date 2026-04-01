@@ -44,11 +44,33 @@ uv run scripts/test_litellm.py
 ├── run-examples.sh             # SDK example runner
 ├── scripts/                    # demo data and test scripts
 │   ├── generate_demo_data.py   # multi-provider demo data
+│   ├── test_claude_agent_sdk.py # Claude Agent SDK integration test
 │   ├── test_*.py               # Python integration tests
 │   └── test_*.ts               # Node integration tests (Vercel AI, OTel)
 ├── trace-generator/            # mock trace builder
 └── screenshot-demo/            # UI screenshot tool
 ```
+
+## Claude Agent SDK integration
+
+Tests the `posthog.ai.claude_agent_sdk` integration (PostHog/posthog-python#477).
+Requires installing local posthog-python since the integration isn't released yet.
+
+```bash
+# One-time: install local posthog-python with the integration
+make install-local-sdk
+
+# Run single query
+make test-claude-agent-sdk
+
+# Interactive chat mode
+make test-claude-agent-sdk-interactive
+
+# Custom prompt
+uv run --no-sync scripts/test_claude_agent_sdk.py --prompt "your prompt here"
+```
+
+**Important:** Use `uv run --no-sync` (or the Makefile targets) to avoid `uv` overwriting the local SDK install with the PyPI version.
 
 ## Configuration
 
