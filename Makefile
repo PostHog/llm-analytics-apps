@@ -50,8 +50,9 @@ demo-data-negative:
 
 ## Install local posthog-python for development (required for claude-agent-sdk integration)
 install-local-sdk:
+	@uv sync
 	@uv pip install -e ../posthog-python
-	@echo "Local posthog-python installed. Use 'uv run --no-sync' to avoid overwriting."
+	@echo "Local posthog-python installed. Use 'make test-claude-agent-sdk' to run."
 
 ## Claude Agent SDK test (requires local posthog-python with integration)
 test-claude-agent-sdk:
