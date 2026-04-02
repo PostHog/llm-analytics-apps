@@ -39,32 +39,23 @@ fi
 # ---------------------------------------------------------------------------
 
 install_python_deps() {
-    echo "Installing Python example dependencies into $PYTHON_REPO/.venv..."
+    echo "Installing Python example dependencies..."
 
-    local all_deps=()
-    for req in "$PYTHON_REPO"/examples/example-ai-*/requirements.txt; do
-        [[ -f "$req" ]] || continue
-        while IFS= read -r line; do
-            [[ -z "$line" || "$line" == \#* ]] && continue
-            all_deps+=("$line")
-        done < "$req"
+    if ! command -v uv &>/dev/null; then
+        echo "  uv is required to install Python example dependencies."
+        echo "  Install it: https://docs.astral.sh/uv/getting-started/installation/"
+        return 1
+    fi
+
+    for dir in "$PYTHON_REPO"/examples/example-ai-*/; do
+        [[ -d "$dir" ]] || continue
+        local name
+        name=$(basename "$dir")
+        if [[ -f "$dir/pyproject.toml" ]]; then
+            echo "  $name..."
+            (cd "$dir" && uv sync 2>&1 | tail -1)
+        fi
     done
-
-    if [[ ${#all_deps[@]} -eq 0 ]]; then
-        echo "  No Python requirements found."
-        return
-    fi
-
-    local unique_deps
-    unique_deps=$(printf '%s\n' "${all_deps[@]}" | sort -u)
-
-    echo "  Dependencies: $(echo "$unique_deps" | tr '\n' ' ')"
-
-    if command -v uv &>/dev/null; then
-        echo "$unique_deps" | xargs uv pip install --python "$PYTHON" 2>&1 | tail -3
-    else
-        echo "$unique_deps" | xargs "$PYTHON" -m pip install 2>&1 | tail -3
-    fi
     echo "  Done."
 }
 
@@ -76,7 +67,7 @@ install_node_deps() {
         name=$(basename "$dir")
         if [[ -f "$dir/package.json" ]]; then
             echo "  $name..."
-            (cd "$dir" && pnpm install --no-frozen-lockfile 2>&1 | tail -1)
+            (cd "$dir" && pnpm install 2>&1 | tail -1)
         fi
     done
     echo "  Done."
@@ -142,7 +133,11 @@ run_example() {
     echo ""
 
     if [[ "$lang" == "py" ]]; then
-        "$PYTHON" "$file"
+        if [[ -f "$dir/pyproject.toml" ]] && command -v uv &>/dev/null; then
+            (cd "$dir" && uv run python "$(basename "$file")")
+        else
+            "$PYTHON" "$file"
+        fi
     else
         (cd "$dir" && npx tsx "$(basename "$file")")
     fi
@@ -157,7 +152,11 @@ example_cmd() {
     dir=$(dirname "$file")
 
     if [[ "$lang" == "py" ]]; then
-        echo "$PYTHON $file"
+        if [[ -f "$dir/pyproject.toml" ]] && command -v uv &>/dev/null; then
+            echo "cd $dir && uv run python $(basename "$file")"
+        else
+            echo "$PYTHON $file"
+        fi
     else
         echo "cd $dir && npx tsx $(basename "$file")"
     fi
