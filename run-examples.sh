@@ -144,9 +144,24 @@ cache_key() {
     echo "${name//\//__}"
 }
 
+# Associative array of file path → hash, populated by precompute_hashes
+declare -A FILE_HASHES=()
+
 file_hash() {
     local file="$1"
-    shasum -a 256 "$file" | cut -d' ' -f1
+    if [[ -n "${FILE_HASHES[$file]+x}" ]]; then
+        echo "${FILE_HASHES[$file]}"
+    else
+        shasum -a 256 "$file" | cut -d' ' -f1
+    fi
+}
+
+# Compute all example file hashes in a single shasum call
+precompute_hashes() {
+    [[ ${#FILES[@]} -eq 0 ]] && return
+    while IFS=' ' read -r hash filepath; do
+        FILE_HASHES["$filepath"]="$hash"
+    done < <(shasum -a 256 "${FILES[@]}")
 }
 
 is_cached() {
@@ -266,7 +281,6 @@ run_parallel() {
     local skipped=0
     for i in "${indices[@]}"; do
         if is_cached "$i"; then
-            echo "  ✓ ${NAMES[$i]} (cached)"
             (( skipped++ )) || true
         else
             filtered+=("$i")
@@ -274,24 +288,56 @@ run_parallel() {
     done
 
     if [[ ${#filtered[@]} -eq 0 ]]; then
-        echo ""
         echo "All ${#indices[@]} examples cached. Use --rerun to force re-running."
         return 0
-    fi
-
-    if [[ $skipped -gt 0 ]]; then
-        echo ""
-        echo "Skipped $skipped cached examples."
     fi
 
     mkdir -p "$RESULTS_DIR"
 
     # Build phrocs config
-    local config
+    local config info_script
     config=$(mktemp /tmp/phrocs-examples-XXXXXX.yaml)
-    trap "rm -f $config" EXIT
+    info_script=$(mktemp /tmp/phrocs-info-XXXXXX.sh)
+    trap "rm -f $config $info_script" EXIT
+
+    local total=${#indices[@]}
+    local cached=$skipped
+    local pending=${#filtered[@]}
+
+    # Info tab script with PostHog brand colors
+    cat > "$info_script" <<'INFOEOF'
+#!/usr/bin/env bash
+o='\033[38;2;245;78;0m'  # orange #F54E00
+b='\033[38;2;29;74;255m' # blue   #1D4AFF
+g='\033[38;5;245m'       # gray
+B='\033[1m'              # bold
+r='\033[0m'              # reset
+INFOEOF
+    cat >> "$info_script" <<INFOEOF
+echo ''
+printf "\${o}\${B}  PostHog LLM Analytics — Provider Examples\${r}\\n"
+printf "\${g}  ─────────────────────────────────────\${r}\\n"
+echo ''
+printf "  \${B}Examples:\${r}  \${b}${pending}\${r} running, \${b}${cached}\${r} cached, \${b}${total}\${r} total\\n"
+echo ''
+printf "  Cached examples are skipped because their source\\n"
+printf "  has not changed since the last successful run.\\n"
+echo ''
+printf "\${g}  ─────────────────────────────────────\${r}\\n"
+printf "  \${B}Commands:\${r}\\n"
+printf "    \${b}--rerun\${r}    Ignore cache and re-run everything\\n"
+printf "    \${b}--reset\${r}    Clear the results cache\\n"
+printf "    \${b}--list\${r}     Show all examples with cache status\\n"
+echo ''
+printf "\${g}  ─────────────────────────────────────\${r}\\n"
+echo ''
+INFOEOF
+    chmod +x "$info_script"
 
     echo "procs:" > "$config"
+    echo "  info:" >> "$config"
+    echo "    shell: \"bash $info_script\"" >> "$config"
+
     for i in "${filtered[@]}"; do
         local name="${NAMES[$i]}"
         local cmd
@@ -307,7 +353,6 @@ run_parallel() {
         echo "    shell: \"$full_cmd\"" >> "$config"
     done
 
-    echo "Running ${#filtered[@]} examples in parallel..."
     phrocs --config "$config"
 }
 
@@ -336,6 +381,7 @@ fi
 
 discover_python
 discover_node
+precompute_hashes
 
 if [[ ${#NAMES[@]} -eq 0 ]]; then
     echo "No examples found."
