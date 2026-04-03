@@ -25,3 +25,6 @@ example.json
 
 # Node.js
 node_modules/
+
+# Example runner results cache
+.results/
