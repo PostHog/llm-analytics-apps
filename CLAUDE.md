@@ -20,9 +20,9 @@ What remains here:
 make setup                      # install deps via uv
 
 # Run SDK examples from sibling repos
-make examples-list              # list all available examples
-make examples-parallel          # run all in parallel via mprocs
-./run-examples.sh anthropic     # run by name filter
+./run-examples.sh --list            # list all available examples
+./run-examples.sh --parallel        # run all in parallel via phrocs
+./run-examples.sh anthropic         # run by name filter
 
 # Generate demo data
 make demo-data                  # 5 conversations, random providers

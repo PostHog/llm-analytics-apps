@@ -1,29 +1,9 @@
-.PHONY: setup examples examples-list examples-all examples-parallel examples-install run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+.PHONY: setup run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
 
 ## Install all dependencies
 setup:
 	@uv sync
 	@pnpm install
-
-## Run the interactive example picker (sources .env, discovers examples from sibling SDK repos)
-examples:
-	@./run-examples.sh
-
-## List all available examples
-examples-list:
-	@./run-examples.sh --list
-
-## Run all examples sequentially
-examples-all:
-	@./run-examples.sh --all
-
-## Run all examples in parallel via mprocs (or filtered: make examples-parallel F=anthropic)
-examples-parallel:
-	@./run-examples.sh --parallel $(F)
-
-## Install dependencies for all examples
-examples-install:
-	@./run-examples.sh --install
 
 ## Run the trace generator (mock trace data, no LLM calls)
 run-trace-generator:

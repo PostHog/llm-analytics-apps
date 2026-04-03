@@ -6,7 +6,10 @@ For copy-paste-able provider integration examples, see the `examples/example-ai-
 
 ## Setup
 
-Requires [uv](https://docs.astral.sh/uv/) and [pnpm](https://pnpm.io/).
+Requires:
+- [uv](https://docs.astral.sh/uv/)
+- [pnpm](https://pnpm.io/)
+- [phrocs](https://github.com/PostHog/posthog/tre/master/tools/phrocs)
 
 ```bash
 cp .env.example .env
@@ -21,18 +24,24 @@ make setup
 Discovers and runs all `example-ai-*` examples from sibling `posthog-python` and `posthog-js` repos.
 
 ```bash
-# List all available examples
-make examples-list
+# List all available examples (with cache status)
+./run-examples.sh --list
 
 # Run a specific example or group by name
 ./run-examples.sh anthropic        # all anthropic examples
 ./run-examples.sh python/openai    # python openai examples only
 
-# Run all examples in parallel via mprocs
-make examples-parallel
+# Run all examples in parallel via phrocs
+./run-examples.sh --parallel
+
+# Run all sequentially
+./run-examples.sh --all
+
+# Force re-run (ignore cache)
+./run-examples.sh --rerun --all
 
 # Install dependencies for all examples
-make examples-install
+./run-examples.sh --install
 ```
 
 ### Demo Data Generator
