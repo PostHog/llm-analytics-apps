@@ -16,7 +16,7 @@ set -euo pipefail
 #   ./run-examples.sh --install                 Install deps for all examples
 #   ./run-examples.sh --rerun                   Force re-run (ignore cache), combinable with other flags
 #   ./run-examples.sh --reset                   Clear the results cache
-#   ./run-examples.sh openai/embeddings         Run a specific example (fuzzy match)
+#   ./run-examples.sh openai/embeddings         Run a specific example (fuzzy match, bypasses cache)
 #   ./run-examples.sh anthropic                 Run all examples matching "anthropic"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -473,6 +473,8 @@ elif [[ -n "$MODE" && "$MODE" != --* ]]; then
         echo "Use --list to see all available examples."
         exit 1
     elif [[ ${#MATCHED[@]} -eq 1 ]]; then
+        # Running a single example directly always bypasses the cache.
+        RERUN=1
         run_example "${MATCHED[0]}"
     else
         echo "Running ${#MATCHED[@]} examples matching '$MODE':"
