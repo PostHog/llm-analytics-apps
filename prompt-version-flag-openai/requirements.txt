@@ -1,0 +1,3 @@
+openai
+posthog>=7.9.12
+python-dotenv
