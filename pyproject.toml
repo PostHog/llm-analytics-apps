@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "python-dotenv>=1.0.0",
-    "posthog>=6.6.1",
+    "posthog>=7.14.2",
     "anthropic>=0.18.0",
     "google-genai",
     "langchain",
