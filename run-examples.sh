@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# Requires bash >= 4 (associative arrays). macOS ships 3.2, so re-exec under
+# a modern bash from Homebrew if we find one.
+if (( BASH_VERSINFO[0] < 4 )); then
+    for _alt in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+        if [[ -x "$_alt" ]]; then
+            exec "$_alt" "$0" "$@"
+        fi
+    done
+    echo "Error: this script needs bash >= 4. Install one via 'brew install bash'." >&2
+    exit 1
+fi
 set -euo pipefail
 
 # Run AI provider examples from posthog-python and posthog-js repos.
@@ -24,11 +35,35 @@ PYTHON_REPO="${POSTHOG_PYTHON_PATH:-$SCRIPT_DIR/../posthog-python}"
 JS_REPO="${POSTHOG_JS_PATH:-$SCRIPT_DIR/../posthog-js}"
 RESULTS_DIR="$SCRIPT_DIR/.results"
 
-# Load .env
+# Load .env, but never clobber values already present in the environment.
+# This lets `op run --env-file=.env -- ./run-examples.sh` work: op resolves
+# `op://...` refs into env vars, and sourcing must not overwrite them with the
+# literal reference strings.
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
-    set -a
-    source "$SCRIPT_DIR/.env"
-    set +a
+    while IFS='=' read -r _env_key _env_value; do
+        [[ "$_env_key" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${_env_key// }" ]] && continue
+        [[ -n "${!_env_key:-}" ]] && continue
+        _env_value="${_env_value%\"}"
+        _env_value="${_env_value#\"}"
+        export "$_env_key=$_env_value"
+    done < "$SCRIPT_DIR/.env"
+    unset _env_key _env_value
+fi
+
+# Default to a local PostHog instance when no key is configured. The local
+# project key rotates whenever the dev env is reset, so we fetch it fresh
+# rather than caching it in .env.
+if [[ -z "${POSTHOG_API_KEY:-}" ]]; then
+    : "${POSTHOG_HOST:=http://localhost:8010}"
+    if _local_key=$(uv run --quiet "$SCRIPT_DIR/scripts/get_localhost_api_key.py" --host "$POSTHOG_HOST" --quiet 2>/dev/null); then
+        export POSTHOG_API_KEY="$_local_key"
+        export POSTHOG_HOST
+        echo "Using local PostHog at $POSTHOG_HOST (key: ${_local_key:0:8}…)"
+    else
+        echo "Warning: POSTHOG_API_KEY unset and could not fetch one from $POSTHOG_HOST" >&2
+    fi
+    unset _local_key
 fi
 
 # ---------------------------------------------------------------------------
@@ -347,8 +382,11 @@ INFOEOF
         local hash
         hash=$(file_hash "${FILES[$i]}")
         local cache_file="$RESULTS_DIR/$key.hash"
-        # Wrap command to record pass/fail in the results cache
-        local full_cmd="set -a; source $SCRIPT_DIR/.env 2>/dev/null; set +a; ($cmd) && printf '%s' '$hash' > '$cache_file' || { rm -f '$cache_file'; exit 1; }"
+        # Wrap command to record pass/fail in the results cache. The parent shell
+        # already exported the right env (including any op-resolved secrets and the
+        # auto-fetched local PostHog key), so phrocs subprocesses inherit it — no
+        # need to re-source .env here.
+        local full_cmd="($cmd) && printf '%s' '$hash' > '$cache_file' || { rm -f '$cache_file'; exit 1; }"
         echo "  \"$name\":" >> "$config"
         echo "    shell: \"$full_cmd\"" >> "$config"
     done
