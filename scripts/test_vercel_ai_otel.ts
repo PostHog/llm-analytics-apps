@@ -2,8 +2,10 @@
 /**
  * E2E test script for OTel -> PostHog mapping with Vercel AI SDK.
  *
- * Runs real Vercel AI SDK scenarios and sends OTel spans to PostHog for manual
- * verification. Each scenario exercises a different feature of the framework.
+ * Runs real Vercel AI SDK scenarios and ships OTel spans to PostHog via the
+ * SDK's `PostHogSpanProcessor` (from `@posthog/ai/otel`). The processor filters
+ * to AI spans and exports them to PostHog's OTLP endpoint internally, so no
+ * manual exporter/URL wiring is needed. Each scenario exercises a feature.
  *
  * Usage:
  *   npx tsx scripts/test_vercel_ai_otel.ts           # Run all scenarios
@@ -15,8 +17,8 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { PostHogSpanProcessor } from '@posthog/ai/otel';
 import { generateText, streamText, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
@@ -31,11 +33,11 @@ const MODEL = 'gpt-4o-mini';
 let otelSdk: NodeSDK | null = null;
 
 function setupOtel(): NodeSDK {
-  const posthogApiKey = process.env.POSTHOG_API_KEY;
-  const posthogHost = process.env.POSTHOG_HOST || 'http://localhost:8010';
+  const projectToken = process.env.POSTHOG_API_KEY;
+  const host = process.env.POSTHOG_HOST || 'http://localhost:8010';
   const debug = process.env.DEBUG === '1';
 
-  if (!posthogApiKey) {
+  if (!projectToken) {
     console.error('ERROR: POSTHOG_API_KEY must be set in .env');
     process.exit(1);
   }
@@ -48,16 +50,9 @@ function setupOtel(): NodeSDK {
     resourceAttrs['posthog.ai.debug'] = 'true';
   }
 
-  const exporter = new OTLPTraceExporter({
-    url: `${posthogHost}/i/v0/ai/otel`,
-    headers: {
-      Authorization: `Bearer ${posthogApiKey}`,
-    },
-  });
-
   const sdk = new NodeSDK({
     resource: resourceFromAttributes(resourceAttrs),
-    traceExporter: exporter,
+    spanProcessors: [new PostHogSpanProcessor({ projectToken, host })],
   });
   sdk.start();
   return sdk;

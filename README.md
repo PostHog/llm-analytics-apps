@@ -73,9 +73,20 @@ uv run scripts/test_litellm.py
 uv run scripts/test_langchain_otel.py
 uv run scripts/test_pydantic_ai_otel.py
 
-# Node (Vercel AI SDK)
-npx tsx scripts/test_vercel_ai_otel.ts
-npx tsx scripts/test_vercel_anthropic.ts
+# Node — @posthog/ai
+npx tsx scripts/test_posthog_ai_sdk.ts   # subpath clients + captureAiGeneration
+npx tsx scripts/test_vercel_ai_otel.ts   # OTel via PostHogSpanProcessor
+npx tsx scripts/test_vercel_anthropic.ts # withTracing (Vercel AI SDK)
+```
+
+The Node scripts read `POSTHOG_API_KEY` / `POSTHOG_HOST` from the environment.
+For a local PostHog, fetch the project key first and pass it through `op run`
+(which resolves the provider keys in `.env`):
+
+```bash
+KEY=$(uv run scripts/get_localhost_api_key.py -q)
+POSTHOG_API_KEY="$KEY" POSTHOG_HOST=http://localhost:8010 \
+  op run --env-file=.env -- pnpm exec tsx scripts/test_posthog_ai_sdk.ts
 ```
 
 ## Local SDK Development
@@ -86,6 +97,22 @@ To develop against local SDK checkouts, set these in `.env`:
 POSTHOG_PYTHON_PATH=../../posthog-python
 POSTHOG_JS_PATH=../../posthog-js
 ```
+
+### Testing unreleased `@posthog/ai`
+
+By default `package.json` pins the **published** `@posthog/ai`, so `make setup`
+works with no posthog-js checkout. To run the Node scripts against a local SDK
+build instead (e.g. to validate an unreleased change), link it in:
+
+```bash
+make link-local-sdk                                       # uses ../posthog-js
+POSTHOG_JS_PATH=/path/to/posthog-js make link-local-sdk   # or any location
+```
+
+`link-local-sdk` builds `@posthog/ai` (and its workspace deps, in topo order)
+and rewrites `package.json` to point `@posthog/ai` + `posthog-node` at your
+checkout. That edit is local-only — don't commit it. To restore the published
+SDK: `git checkout -- package.json pnpm-lock.yaml && pnpm install`.
 
 ## License
 
