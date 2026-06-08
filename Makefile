@@ -1,9 +1,13 @@
-.PHONY: setup run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
+.PHONY: setup link-local-sdk run-trace-generator run-trace-generator-debug demo-data demo-data-quick demo-data-tools demo-data-negative
 
 ## Install all dependencies
 setup:
 	@uv sync
 	@pnpm install
+
+## Build & link a local @posthog/ai for unreleased SDK testing (override path with POSTHOG_JS_PATH)
+link-local-sdk:
+	@./scripts/link_local_ai_sdk.sh
 
 ## Run the trace generator (mock trace data, no LLM calls)
 run-trace-generator:
