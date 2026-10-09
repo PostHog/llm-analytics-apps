@@ -599,7 +599,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1381,7 +1381,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.81.13"
+version = "1.84.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1397,9 +1397,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/80/b6cb799e7100953d848e106d0575db34c75bc3b57f31f2eefdfb1e23655f/litellm-1.81.13.tar.gz", hash = "sha256:083788d9c94e3371ff1c42e40e0e8198c497772643292a65b1bc91a3b3b537ea", size = 16562861, upload-time = "2026-02-17T02:00:47.466Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/e9/8941b7e72a187000561d932c0f2f2ed2b0fd080dfc33ba6e05961d45ca7d/litellm-1.84.0.tar.gz", hash = "sha256:b8ad0cbea11a5941b18d5af973017a340abd3d3ab41cb86e5401b970626d71a6", size = 15103206, upload-time = "2026-05-14T05:45:53.017Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/f3/fffb7932870163cea7addc392165647a9a8a5489967de486c854226f1141/litellm-1.81.13-py3-none-any.whl", hash = "sha256:ae4aea2a55e85993f5f6dd36d036519422d24812a1a3e8540d9e987f2d7a4304", size = 14587505, upload-time = "2026-02-17T02:00:44.22Z" },
+    { url = "https://files.pythonhosted.org/packages/01/a6/77fa1bbf5e42eb596b06318b3f7e6af5d0f44028046d1d598c6a595d028f/litellm-1.84.0-py3-none-any.whl", hash = "sha256:2a58d6041e6aa27d1a28dc8d8828ab500fef1a00ef74ca65e60899035010c2f2", size = 16735062, upload-time = "2026-05-14T05:45:49.927Z" },
 ]
 
 [[package]]
@@ -1434,7 +1434,7 @@ requires-dist = [
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
     { name = "langchain-openai" },
-    { name = "litellm", specifier = "==1.81.13" },
+    { name = "litellm", specifier = "==1.84.0" },
     { name = "openai" },
     { name = "openai-agents" },
     { name = "opentelemetry-api" },
